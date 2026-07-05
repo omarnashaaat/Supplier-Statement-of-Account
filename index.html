@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شركة سامكون للإستثمار العقارى والتعمير - كشف حساب الموردين</title>
+  
+  <!-- Fonts (Cairo, Tajawal, JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'Tajawal', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel CDN for compiling JSX in real-time -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Cairo', 'Tajawal', sans-serif;
+      direction: rtl;
+    }
+    
+    /* Print optimizations */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        color: black !important;
+        font-size: 11pt !important;
+        line-height: 1.3 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        margin: 0 !important;
+        padding: 0 !important;
+        direction: rtl !important;
+      }
+      .print-page {
+        width: 210mm !important;
+        min-height: 297mm !important;
+        padding-top: 10mm !important;
+        padding-bottom: 10mm !important;
+        padding-left: 12mm !important;
+        padding-right: 12mm !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+      table {
+        page-break-inside: auto;
+        width: 100% !important;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col select-none antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Converted Custom SVG Icon Component to fully decouple from Lucide CDN dependency
+    const Icon = ({ name, className = "w-4 h-4", ...props }) => {
+      const iconPaths = {
+        Printer: (
+          <g>
+            <path d="M6 9V2h12v7" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </g>
+        ),
+        Plus: <path d="M5 12h14M12 5v14" />,
+        Trash2: (
+          <g>
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </g>
+        ),
+        Copy: (
+          <g>
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </g>
+        ),
+        RotateCcw: (
+          <g>
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </g>
+        ),
+        Sparkles: (
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+        ),
+        Download: (
+          <g>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </g>
+        ),
+        Upload: (
+          <g>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </g>
+        ),
+        Save: (
+          <g>
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </g>
+        ),
+        Layout: (
+          <g>
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="9" y1="21" x2="9" y2="9" />
+          </g>
+        ),
+        Eye: (
+          <g>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </g>
+        ),
+        Settings: (
+          <g>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </g>
+        ),
+        Calendar: (
+          <g>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </g>
+        ),
+        DollarSign: (
+          <g>
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </g>
+        ),
+        FileText: (
+          <g>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </g>
+        ),
+        Check: <polyline points="20 6 9 17 4 12" />,
+        Edit3: (
+          <g>
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </g>
+        ),
+        Layers: (
+          <g>
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
+          </g>
+        ),
+        User: (
+          <g>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </g>
+        ),
+        CheckCircle: (
+          <g>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </g>
+        ),
+        HelpCircle: (
+          <g>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </g>
+        ),
+        TrendingUp: (
+          <g>
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+            <polyline points="17 6 23 6 23 12" />
+          </g>
+        ),
+        Share2: (
+          <g>
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </g>
+        ),
+        FileSpreadsheet: (
+          <g>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <line x1="10" y1="9" x2="8" y2="9" />
+          </g>
+        ),
+        Info: (
+          <g>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </g>
+        )
+      };
+
+      return (
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className={className}
+          {...props}
+        >
+          {iconPaths[name] || null}
+        </svg>
+      );
+    };
+
+    // Helper formatting functions
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    }
+
+    function tafqeet(num) {
+      if (num === 0) return 'صفر جنيه فقط لا غير';
+      const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
+      const tens = ['', 'عشرة', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+      const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+      const thousands = ['', 'ألف', 'ألفان', 'ثلاثة آلاف', 'أربعة آلاف', 'خمسة آلاف', 'ستة آلاف', 'سبعة آلاف', 'ثمانية آلاف', 'تسعة آلاف'];
+
+      let result = '';
+      const parts = Math.floor(num).toString().padStart(6, '0').split('');
+      
+      const th100 = parseInt(parts[0]);
+      const th10 = parseInt(parts[1]);
+      const th1 = parseInt(parts[2]);
+      const h100 = parseInt(parts[3]);
+      const h10 = parseInt(parts[4]);
+      const h1 = parseInt(parts[5]);
+
+      let thValue = th100 * 100000 + th10 * 10000 + th1 * 1000;
+      if (thValue > 0) {
+        if (th100 > 0) {
+          result += (th100 === 1 ? 'مائة' : th100 === 2 ? 'مائتان' : ones[th100] + 'مائة');
+          if (th10 > 0 || th1 > 0) result += ' و ';
+        }
+        if (th10 === 1) {
+          if (th1 === 0) result += 'عشرة';
+          else if (th1 === 1) result += 'أحد عشر';
+          else if (th1 === 2) result += 'اثنا عشر';
+          else result += ones[th1] + ' عشر';
+        } else {
+          if (th1 > 0) result += ones[th1];
+          if (th10 > 0) {
+            if (th1 > 0) result += ' و ';
+            result += tens[th10];
+          }
+        }
+        if (thValue === 1000) result = 'ألف';
+        else if (thValue === 2000) result = 'ألفان';
+        else if (thValue >= 3000 && thValue <= 10000) result += ' آلاف';
+        else result += ' ألفاً';
+      }
+
+      let hValue = h100 * 100 + h10 * 10 + h1;
+      if (hValue > 0) {
+        if (result !== '') result += ' و ';
+        if (h100 > 0) {
+          result += (h100 === 1 ? 'مائة' : h100 === 2 ? 'مائتان' : ones[h100] + 'مائة');
+          if (h10 > 0 || h1 > 0) result += ' و ';
+        }
+        if (h10 === 1) {
+          if (h1 === 0) result += 'عشرة';
+          else if (h1 === 1) result += 'أحد عشر';
+          else if (h1 === 2) result += 'اثنا عشر';
+          else result += ones[h1] + ' عشر';
+        } else {
+          if (h1 > 0) result += ones[h1];
+          if (h10 > 0) {
+            if (h1 > 0) result += ' و ';
+            result += tens[h10];
+          }
+        }
+      }
+
+      const cents = Math.round((num - Math.floor(num)) * 100);
+      let centsStr = '';
+      if (cents > 0) {
+        centsStr = ` و ${cents} قرشاً`;
+      }
+      return `فقط قدره ${result} جنيهًا مصريًا${centsStr} لا غير`;
+    }
+
+    // Default configuration and data
+    const defaultConfig = {
+      themeColor: 'high-density',
+      tableStyle: 'grid',
+      fontSize: 'base',
+      showCompanyHeader: true,
+      showStatementNo: true,
+      showDateRange: true,
+      showTotalQuantity: true,
+      showGrandTotal: true,
+      visibleColumns: {
+        date: true,
+        rawMaterial: true,
+        quantity: true,
+        price: true,
+        total: true,
+        costCenter: true,
+        notes: true,
+      },
+    };
+
+    const defaultHeader = {
+      title: 'كشف حساب المورد',
+      supplierName: 'اسلام ابو صليب',
+      rawMaterialType: 'رمل',
+      companyName: 'شركة سامكون للإستثمار العقارى والتعمير',
+      logoText: 'الإدارة المالية',
+      statementNo: 'STA-2026-0012',
+      dateFrom: '2026-06-26',
+      dateTo: '2026-06-30',
+      phone: '',
+      address: '',
+      additionalNotes: 'برجاء مراجعة الحساب والتوقيع بالاعتماد في نهاية الكشف لتسوية المستحقات.',
+      hasSignatures: true,
+      signatures: ['توقيع المستلم', 'المراجع المالي', 'اعتماد الإدارة'],
+    };
+
+    const defaultRows = [
+      { id: 'r1', date: '2026-06-26', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r2', date: '2026-06-26', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r3', date: '2026-06-27', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r4', date: '2026-06-27', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r5', date: '2026-06-28', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r6', date: '2026-06-29', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r7', date: '2026-06-29', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r8', date: '2026-06-30', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+    ];
+
+    const templates = [
+      {
+        name: 'كشف حساب إسلام أبو صليب (رمل)',
+        icon: '🏗️',
+        header: defaultHeader,
+        rows: defaultRows,
+        config: defaultConfig,
+      },
+      {
+        name: 'كشف توريد أسمنت بورتلاندي',
+        icon: '🧱',
+        header: {
+          title: 'كشف حساب المورد',
+          supplierName: 'الشركة العربية للأسمنت',
+          rawMaterialType: 'أسمنت بورتلاندي',
+          companyName: 'شركة سامكون للإستثمار العقارى والتعمير',
+          logoText: 'الإدارة المالية',
+          statementNo: 'STA-2026-0045',
+          dateFrom: '2026-06-01',
+          dateTo: '2026-06-15',
+          phone: '',
+          address: '',
+          additionalNotes: 'الأسعار شاملة التوصيل والضريبة المطبقة والتحميل بالموقع.',
+          hasSignatures: true,
+          signatures: ['أمين المستودع', 'المراجع الهندسي', 'المدير المالي'],
+        },
+        config: { ...defaultConfig, themeColor: 'royal-blue' },
+        rows: [
+          { id: 'r2-1', date: '2026-06-01', rawMaterial: 'أسمنت مقاوم', quantity: 12.00, price: 2100.00, total: 25200.00, costCenter: 'مشروع فيلا دجلة', notes: 'دفعة صب الأساسات' },
+          { id: 'r2-2', date: '2026-06-05', rawMaterial: 'أسمنت عادي', quantity: 25.00, price: 1950.00, total: 48750.00, costCenter: 'مشروع مول أكتوبر', notes: 'توريد تشطيبات' },
+          { id: 'r2-3', date: '2026-06-10', rawMaterial: 'أسمنت عادي', quantity: 15.00, price: 1950.00, total: 29250.00, costCenter: 'مشروع فيلا دجلة', notes: 'توريد حوائط ومباني' },
+        ],
+      }
+    ];
+
+    function App() {
+      // Primary states (using lazy state initialization from localStorage for robustness)
+      const [header, setHeader] = useState(() => {
+        const saved = localStorage.getItem('current_statement_header');
+        return saved ? JSON.parse(saved) : defaultHeader;
+      });
+      const [rows, setRows] = useState(() => {
+        const saved = localStorage.getItem('current_statement_rows');
+        return saved ? JSON.parse(saved) : defaultRows;
+      });
+      const [config, setConfig] = useState(() => {
+        const saved = localStorage.getItem('current_statement_config');
+        return saved ? JSON.parse(saved) : defaultConfig;
+      });
+      const [activeSavedId, setActiveSavedId] = useState(() => {
+        return localStorage.getItem('current_statement_active_id') || null;
+      });
+      
+      // Local storage states
+      const [savedStatements, setSavedStatements] = useState([]);
+      const [currentSaveName, setCurrentSaveName] = useState('');
+      const [showSaveModal, setShowSaveModal] = useState(false);
+      const [activeTab, setActiveTab] = useState('editor');
+      const [showGuide, setShowGuide] = useState(false);
+      const [toast, setToast] = useState(null);
+
+      // Load statements on startup
+      useEffect(() => {
+        const saved = localStorage.getItem('supplier_statements');
+        if (saved) {
+          try {
+            setSavedStatements(JSON.parse(saved));
+          } catch (e) {
+            console.error('Failed to load statements from local storage', e);
+          }
+        }
+      }, []);
+
+      // Auto-save active state to local storage on any change
+      useEffect(() => {
+        localStorage.setItem('current_statement_header', JSON.stringify(header));
+      }, [header]);
+
+      useEffect(() => {
+        localStorage.setItem('current_statement_rows', JSON.stringify(rows));
+      }, [rows]);
+
+      useEffect(() => {
+        localStorage.setItem('current_statement_config', JSON.stringify(config));
+      }, [config]);
+
+      useEffect(() => {
+        if (activeSavedId) {
+          localStorage.setItem('current_statement_active_id', activeSavedId);
+        } else {
+          localStorage.removeItem('current_statement_active_id');
+        }
+      }, [activeSavedId]);
+
+      // Automatically update the savedStatements list if editing a loaded statement!
+      useEffect(() => {
+        if (!activeSavedId) return;
+        
+        setSavedStatements(prev => {
+          const existing = prev.find(s => s.id === activeSavedId);
+          if (!existing) return prev;
+          
+          // Compare to prevent infinite rendering loops
+          if (
+            JSON.stringify(existing.header) === JSON.stringify(header) &&
+            JSON.stringify(existing.rows) === JSON.stringify(rows) &&
+            JSON.stringify(existing.config) === JSON.stringify(config)
+          ) {
+            return prev;
+          }
+          
+          const updated = prev.map(s => {
+            if (s.id === activeSavedId) {
+              return {
+                ...s,
+                header,
+                rows,
+                config,
+                updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+              };
+            }
+            return s;
+          });
+          
+          localStorage.setItem('supplier_statements', JSON.stringify(updated));
+          return updated;
+        });
+      }, [header, rows, config, activeSavedId]);
+
+      // Toast Notification helper
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => {
+          setToast(null);
+        }, 4000);
+      };
+
+      // Realtime calculations
+      const totalQuantity = rows.reduce((sum, row) => sum + (row.quantity || 0), 0);
+      const grandTotal = rows.reduce((sum, row) => sum + ((row.quantity || 0) * (row.price || 0)), 0);
+
+      // Input row updates
+      const handleUpdateRow = (id, field, value) => {
+        setRows(prevRows => prevRows.map(row => {
+          if (row.id === id) {
+            const updatedRow = { ...row, [field]: value };
+            if (field === 'quantity' || field === 'price') {
+              updatedRow.total = (Number(updatedRow.quantity) || 0) * (Number(updatedRow.price) || 0);
+            }
+            return updatedRow;
+          }
+          return row;
+        }));
+      };
+
+      // Add a blank row
+      const handleAddRow = () => {
+        const newRow = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: rows.length > 0 ? rows[rows.length - 1].date : new Date().toISOString().split('T')[0],
+          rawMaterial: header.rawMaterialType || '',
+          quantity: 0,
+          price: rows.length > 0 ? rows[rows.length - 1].price : 0,
+          total: 0,
+          costCenter: rows.length > 0 ? rows[rows.length - 1].costCenter : '',
+          notes: '',
+        };
+        setRows([...rows, newRow]);
+        showToast('تمت إضافة سطر جديد بنجاح', 'success');
+      };
+
+      // Duplicate row
+      const handleDuplicateRow = (id) => {
+        const rowToCopy = rows.find(r => r.id === id);
+        if (rowToCopy) {
+          const newRow = {
+            ...rowToCopy,
+            id: Math.random().toString(36).substr(2, 9),
+          };
+          const index = rows.findIndex(r => r.id === id);
+          const updatedRows = [...rows];
+          updatedRows.splice(index + 1, 0, newRow);
+          setRows(updatedRows);
+          showToast('تم تكرار السطر بنجاح', 'info');
+        }
+      };
+
+      // Delete row
+      const handleDeleteRow = (id) => {
+        if (rows.length <= 1) {
+          showToast('يجب أن يحتوي الكشف على سطر واحد على الأقل', 'error');
+          return;
+        }
+        if (window.confirm('هل أنت متأكد من حذف هذا السطر؟')) {
+          setRows(rows.filter(row => row.id !== id));
+          showToast('تم حذف السطر بنجاح', 'info');
+        }
+      };
+
+      // Load pre-built template
+      const handleLoadTemplate = (templateIndex) => {
+        const t = templates[templateIndex];
+        setHeader({ ...t.header });
+        setRows(t.rows.map(r => ({ ...r, id: Math.random().toString(36).substr(2, 9) })));
+        setConfig({ ...t.config });
+        setActiveSavedId(null);
+        showToast(`تم تحميل نموذج: ${t.name}`, 'success');
+      };
+
+      // Trigger Print
+      const handlePrint = () => {
+        window.print();
+      };
+
+      // Reset fields
+      const handleReset = () => {
+        if (window.confirm('هل أنت متأكد من إعادة تعيين جميع البيانات؟ سيتم مسح الجدول الحالي.')) {
+          setHeader({
+            ...defaultHeader,
+            supplierName: '',
+            rawMaterialType: '',
+            statementNo: 'STA-' + new Date().getFullYear() + '-0001',
+            dateFrom: '',
+            dateTo: '',
+          });
+          setRows([{
+            id: Math.random().toString(36).substr(2, 9),
+            date: new Date().toISOString().split('T')[0],
+            rawMaterial: '',
+            quantity: 0,
+            price: 0,
+            total: 0,
+            costCenter: '',
+            notes: '',
+          }]);
+          setActiveSavedId(null);
+          showToast('تمت إعادة ضبط الكشف بنجاح', 'info');
+        }
+      };
+
+      // Save to local list
+      const handleSaveToLocalStorage = () => {
+        if (!currentSaveName.trim()) {
+          showToast('برجاء إدخال اسم لحفظ الكشف', 'error');
+          return;
+        }
+
+        const newId = Math.random().toString(36).substr(2, 9);
+        const newSaved = {
+          id: newId,
+          name: currentSaveName,
+          updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+          header,
+          rows,
+          config,
+        };
+
+        const updatedList = [newSaved, ...savedStatements];
+        setSavedStatements(updatedList);
+        localStorage.setItem('supplier_statements', JSON.stringify(updatedList));
+        setActiveSavedId(newId);
+        setShowSaveModal(false);
+        setCurrentSaveName('');
+        showToast('تم حفظ الكشف بنجاح في القائمة الخاصة بك وبدء الحفظ التلقائي', 'success');
+      };
+
+      // Load saved
+      const handleLoadSaved = (saved) => {
+        setHeader(saved.header);
+        setRows(saved.rows);
+        setConfig(saved.config);
+        setActiveSavedId(saved.id);
+        showToast(`تم استرجاع الكشف وتفعيل الحفظ التلقائي: ${saved.name}`, 'success');
+      };
+
+      // Delete saved item
+      const handleDeleteSaved = (id, e) => {
+        e.stopPropagation();
+        if (window.confirm('هل أنت متأكد من حذف هذا الكشف المحفوظ؟')) {
+          const updated = savedStatements.filter(s => s.id !== id);
+          setSavedStatements(updated);
+          localStorage.setItem('supplier_statements', JSON.stringify(updated));
+          if (activeSavedId === id) {
+            setActiveSavedId(null);
+          }
+          showToast('تم حذف الكشف المحفوظ بنجاح', 'info');
+        }
+      };
+
+      // Export file
+      const handleExportJSON = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ header, rows, config }, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `كشف_حساب_${header.supplierName || 'مورد'}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast('تم تصدير ملف الكشف بنجاح', 'success');
+      };
+
+      // Import file
+      const handleImportJSON = (e) => {
+        const fileReader = new FileReader();
+        if (e.target.files && e.target.files[0]) {
+          fileReader.readAsText(e.target.files[0], "UTF-8");
+          fileReader.onload = (event) => {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              if (parsed.header && parsed.rows) {
+                setHeader(parsed.header);
+                setRows(parsed.rows);
+                if (parsed.config) setConfig(parsed.config);
+                setActiveSavedId(null);
+                showToast('تم استيراد الكشف بنجاح وملء البيانات', 'success');
+              } else {
+                showToast('تنسيق الملف غير صالح، يرجى اختيار ملف كشف صحيح', 'error');
+              }
+            } catch (err) {
+              showToast('حدث خطأ أثناء قراءة الملف', 'error');
+            }
+          };
+        }
+      };
+
+      // Maps visual classes for the page themes
+      const getThemeClasses = () => {
+        switch (config.themeColor) {
+          case 'royal-blue':
+            return {
+              headerBg: 'bg-blue-900 text-white border-blue-900',
+              footerBg: 'bg-blue-50 text-blue-900',
+              border: 'border-blue-200',
+              textAccent: 'text-blue-900',
+              badge: 'bg-blue-100 text-blue-800',
+              tableHeader: 'bg-blue-800 text-white',
+              tableTotal: 'bg-blue-50',
+              inputActive: 'focus:border-blue-500 focus:ring-blue-500',
+              accentBorder: 'border-t-4 border-t-blue-800',
+            };
+          case 'emerald-green':
+            return {
+              headerBg: 'bg-emerald-800 text-white border-emerald-800',
+              footerBg: 'bg-emerald-50 text-emerald-900',
+              border: 'border-emerald-200',
+              textAccent: 'text-emerald-800',
+              badge: 'bg-emerald-100 text-emerald-800',
+              tableHeader: 'bg-emerald-800 text-white',
+              tableTotal: 'bg-emerald-50',
+              inputActive: 'focus:border-emerald-500 focus:ring-emerald-500',
+              accentBorder: 'border-t-4 border-t-emerald-800',
+            };
+          case 'amber-gold':
+            return {
+              headerBg: 'bg-amber-800 text-white border-amber-800',
+              footerBg: 'bg-amber-50 text-amber-900',
+              border: 'border-amber-200',
+              textAccent: 'text-amber-800',
+              badge: 'bg-amber-100 text-amber-800',
+              tableHeader: 'bg-amber-800 text-white',
+              tableTotal: 'bg-amber-50',
+              inputActive: 'focus:border-amber-500 focus:ring-amber-500',
+              accentBorder: 'border-t-4 border-t-amber-800',
+            };
+          case 'high-density':
+            return {
+              headerBg: 'bg-slate-900 text-white border-slate-900',
+              footerBg: 'bg-slate-50 text-slate-900',
+              border: 'border-slate-900',
+              textAccent: 'text-slate-900',
+              badge: 'bg-slate-900 text-white',
+              tableHeader: 'bg-slate-900 text-white',
+              tableTotal: 'bg-slate-100',
+              inputActive: 'focus:border-slate-900 focus:ring-slate-900',
+              accentBorder: 'border-t-4 border-t-slate-900',
+            };
+          case 'minimal-dark':
+            return {
+              headerBg: 'bg-gray-950 text-white border-gray-950',
+              footerBg: 'bg-gray-100 text-gray-950',
+              border: 'border-gray-300',
+              textAccent: 'text-gray-950',
+              badge: 'bg-gray-100 text-gray-900',
+              tableHeader: 'bg-gray-900 text-white',
+              tableTotal: 'bg-gray-100',
+              inputActive: 'focus:border-gray-900 focus:ring-gray-900',
+              accentBorder: 'border-t-4 border-t-gray-900',
+            };
+          case 'classic-gray':
+          default:
+            return {
+              headerBg: 'bg-gray-200 text-gray-800 border-gray-400',
+              footerBg: 'bg-gray-100 text-gray-800',
+              border: 'border-gray-300',
+              textAccent: 'text-gray-800',
+              badge: 'bg-gray-100 text-gray-800',
+              tableHeader: 'bg-gray-200 text-gray-800',
+              tableTotal: 'bg-gray-100',
+              inputActive: 'focus:border-gray-400 focus:ring-gray-400',
+              accentBorder: 'border-t-4 border-t-gray-400',
+            };
+        }
+      };
+
+      const theme = getThemeClasses();
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none antialiased">
+          
+          {/* Toast Notification */}
+          {toast && (
+            <div 
+              className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 border bg-white max-w-md w-[90%] transition-all duration-300 transform translate-y-0 scale-100"
+              style={{
+                borderColor: toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#f43f5e' : '#3b82f6',
+              }}
+            >
+              <div className={`p-1.5 rounded-full ${
+                toast.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+                toast.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
+              }`}>
+                <Icon name={toast.type === 'success' ? 'CheckCircle' : 'Info'} className="w-5 h-5" />
+              </div>
+              <p className="text-sm font-semibold text-slate-800 leading-none">{toast.message}</p>
+            </div>
+          )}
+
+          {/* APP HEADER */}
+          <header className="bg-slate-900 text-white border-b border-slate-800 py-4 px-6 sticky top-0 z-40 shadow-md no-print">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-800 border-2 border-slate-700 rounded-lg flex items-center justify-center text-white">
+                  <Icon name="FileSpreadsheet" className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h1 className="text-base font-black tracking-tight flex items-center gap-2">
+                    <span>منظومة إدارة وطباعة كشوفات حساب الموردين</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">الإصدار المستقل</span>
+                  </h1>
+                  <p className="text-[11px] text-slate-400 mt-0.5">شركة سامكون للإستثمار العقارى والتعمير — الإدارة المالية</p>
+                </div>
+              </div>
+
+              {/* Header Action Row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button 
+                  onClick={() => setShowGuide(!showGuide)}
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium flex items-center gap-1.5 transition-all"
+                >
+                  <Icon name="HelpCircle" className="w-3.5 h-3.5" />
+                  <span>دليل الاستخدام</span>
+                </button>
+
+                <div className="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block" />
+
+                <button 
+                  onClick={handlePrint}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/20 transition-all"
+                >
+                  <Icon name="Printer" className="w-3.5 h-3.5" />
+                  <span>طباعة الكشف (A4)</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Quick interactive guidelines */}
+          {showGuide && (
+            <div className="bg-blue-900/10 border-b border-blue-500/20 py-4 px-6 no-print transition-all">
+              <div className="max-w-7xl mx-auto flex items-start gap-3.5">
+                <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                  <Icon name="Info" className="w-5 h-5" />
+                </div>
+                <div className="text-right">
+                  <h4 className="text-sm font-extrabold text-blue-950">إرشادات استخدام محرر الكشوفات المحترف</h4>
+                  <p className="text-xs text-blue-900/80 mt-1 leading-relaxed max-w-4xl">
+                    هذا المحرر معد خصيصًا لإنتاج كشوفات توريد ومقاولات معتمدة بمقاس ورقة A4 حقيقية. 
+                    يمكنك إدخال الكميات والأسعار للسطور وسيتم حساب الإجماليات والتفقيط آليًا بالعربية. 
+                    لتسهيل العمل، استخدم الأزرار لتكرار السطور المتطابقة، وخصائص ستايل الطباعة لتعديل حجم الخط وهوامش الجدول وألوان الترويسة المعتمدة.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MAIN CONTAINER */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+            
+            {/* LEFT AREA: CONTROLS & FORM (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-5 no-print">
+              
+              {/* Active Save State Status Bar */}
+              <div className={`p-3 rounded-xl border flex items-center justify-between text-xs font-bold shadow-sm transition-all duration-300 ${
+                activeSavedId 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${activeSavedId ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                  {activeSavedId ? (
+                    <span>
+                      كشف نشط للتعديل التلقائي: <span className="font-extrabold text-emerald-950">{(savedStatements.find(s => s.id === activeSavedId)?.name || 'كشف محفوظ')}</span>
+                    </span>
+                  ) : (
+                    <span>مسودة جديدة نشطة (تُحفظ تلقائياً في المتصفح)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Icon name="Check" className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[10px] text-slate-400 font-normal">تم الحفظ</span>
+                </div>
+              </div>
+
+              {/* Tab Selector */}
+              <div className="bg-white border border-slate-200 p-1.5 rounded-xl flex items-center gap-1 shadow-sm">
+                <button
+                  onClick={() => setActiveTab('editor')}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    activeTab === 'editor' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon name="Edit3" className="w-4 h-4" />
+                  <span>البيانات والجدول</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('design')}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    activeTab === 'design' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon name="Layout" className="w-4 h-4" />
+                  <span>تنسيق وستايل الطباعة</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('manage')}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all relative ${
+                    activeTab === 'manage' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon name="Layers" className="w-4 h-4" />
+                  <span>كشوفاتك المحفوظة</span>
+                  {savedStatements.length > 0 && (
+                    <span className="absolute -top-1 -left-1 bg-emerald-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                      {savedStatements.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* EDITOR TAB CONTENT */}
+              {activeTab === 'editor' && (
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-5">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-900" />
+                      <span>بيانات كشف الحساب الأساسية</span>
+                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => setShowSaveModal(true)}
+                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
+                        title="حفظ الكشف الحالي في القائمة"
+                      >
+                        <Icon name="Save" className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={handleReset}
+                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all"
+                        title="إعادة تعيين ومسح البيانات"
+                      >
+                        <Icon name="RotateCcw" className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Header Form Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">عنوان الكشف الرئيسي</label>
+                      <input 
+                        type="text" 
+                        value={header.title}
+                        onChange={(e) => setHeader({ ...header, title: e.target.value })}
+                        placeholder="كشف حساب المورد"
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">اسم المورد</label>
+                      <input 
+                        type="text" 
+                        value={header.supplierName}
+                        onChange={(e) => setHeader({ ...header, supplierName: e.target.value })}
+                        placeholder="اسم المورد بالكامل"
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">نوع مادة الخام</label>
+                      <input 
+                        type="text" 
+                        value={header.rawMaterialType}
+                        onChange={(e) => setHeader({ ...header, rawMaterialType: e.target.value })}
+                        placeholder="رمل، أسمنت، حديد..."
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">رقم الكشف المرجعي</label>
+                      <input 
+                        type="text" 
+                        value={header.statementNo}
+                        onChange={(e) => setHeader({ ...header, statementNo: e.target.value })}
+                        placeholder="STA-2026-0001"
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white font-mono focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all text-left"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">كشف من تاريخ</label>
+                      <input 
+                        type="date" 
+                        value={header.dateFrom}
+                        onChange={(e) => setHeader({ ...header, dateFrom: e.target.value })}
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">كشف إلى تاريخ</label>
+                      <input 
+                        type="date" 
+                        value={header.dateTo}
+                        onChange={(e) => setHeader({ ...header, dateTo: e.target.value })}
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Company credentials */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
+                    <h4 className="text-xs font-extrabold text-slate-700">ترويسة الشركة والختم</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2 flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-400">اسم شركتنا</label>
+                        <input 
+                          type="text" 
+                          value={header.companyName}
+                          onChange={(e) => setHeader({ ...header, companyName: e.target.value })}
+                          placeholder="مؤسسة المقاولات العامة"
+                          className="border border-slate-200 rounded-lg p-2 text-xs text-slate-800"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-400">اسم الختم / القسم</label>
+                        <input 
+                          type="text" 
+                          value={header.logoText}
+                          onChange={(e) => setHeader({ ...header, logoText: e.target.value })}
+                          placeholder="الإدارة المالية"
+                          className="border border-slate-200 rounded-lg p-2 text-xs text-slate-800"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-400">الهاتف والعنوان (إذا لزم)</label>
+                        <input 
+                          type="text" 
+                          value={header.phone}
+                          onChange={(e) => setHeader({ ...header, phone: e.target.value })}
+                          placeholder="هاتف أو عنوان"
+                          className="border border-slate-200 rounded-lg p-2 text-xs text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TABLE ENTRIES EDITOR */}
+                  <div className="border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <span>بنود وسطور الكشف ({rows.length})</span>
+                      </h3>
+                      <button
+                        onClick={handleAddRow}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold flex items-center gap-1 transition-all"
+                      >
+                        <Icon name="Plus" className="w-3 h-3" />
+                        <span>إضافة سطر</span>
+                      </button>
+                    </div>
+
+                    {/* Scrollable list of row forms */}
+                    <div className="max-h-[350px] overflow-y-auto border border-slate-100 rounded-xl p-2.5 bg-slate-50/50 flex flex-col gap-3">
+                      {rows.map((row, index) => (
+                        <div 
+                          key={row.id} 
+                          className="bg-white border border-slate-200 p-3 rounded-lg flex flex-col gap-2.5 relative shadow-sm hover:border-slate-300 transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">السطر #{index + 1}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDuplicateRow(row.id)}
+                                className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded"
+                                title="تكرار البند"
+                              >
+                                <Icon name="Copy" className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRow(row.id)}
+                                className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                title="حذف البند"
+                              >
+                                <Icon name="Trash2" className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-1">
+                              <label className="text-[9px] font-bold text-slate-400">التاريخ</label>
+                              <input 
+                                type="date" 
+                                value={row.date}
+                                onChange={(e) => handleUpdateRow(row.id, 'date', e.target.value)}
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-1">
+                              <label className="text-[9px] font-bold text-slate-400">مسمى الخام</label>
+                              <input 
+                                type="text" 
+                                value={row.rawMaterial}
+                                onChange={(e) => handleUpdateRow(row.id, 'rawMaterial', e.target.value)}
+                                placeholder="مثال: رمل سن"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">الكمية</label>
+                              <input 
+                                type="number" 
+                                value={row.quantity === 0 ? '' : row.quantity}
+                                onChange={(e) => handleUpdateRow(row.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">السعر</label>
+                              <input 
+                                type="number" 
+                                value={row.price === 0 ? '' : row.price}
+                                onChange={(e) => handleUpdateRow(row.id, 'price', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">مركز التكلفة / المشروع</label>
+                              <input 
+                                type="text" 
+                                value={row.costCenter}
+                                onChange={(e) => handleUpdateRow(row.id, 'costCenter', e.target.value)}
+                                placeholder="اسم المشروع"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">ملاحظات البند</label>
+                              <input 
+                                type="text" 
+                                value={row.notes}
+                                onChange={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                                placeholder="ملاحظات اختيارية"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notes & Bottom Settings */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-slate-500">الملاحظات التذييلية للكشف</label>
+                      <textarea 
+                        rows="2"
+                        value={header.additionalNotes}
+                        onChange={(e) => setHeader({ ...header, additionalNotes: e.target.value })}
+                        placeholder="تظهر أسفل كشف الحساب المطبوع..."
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* DESIGN TAB CONTENT */}
+              {activeTab === 'design' && (
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-5">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-extrabold text-slate-800">تنسيقات ومظهر كشف الحساب</h3>
+                  </div>
+
+                  {/* Themes Selector */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-500">النمط البصري (ثيم الترويسة والحدود)</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'high-density' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'high-density' ? 'border-slate-900 bg-slate-100 text-slate-900 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>تنسيق عالي الكثافة (High Density)</span>
+                        <span className="w-4 h-4 rounded bg-slate-950 border border-slate-950 shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'royal-blue' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'royal-blue' ? 'border-blue-900 bg-blue-50 text-blue-900 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>أزرق ملكي (Royal Blue)</span>
+                        <span className="w-4 h-4 rounded bg-blue-900 shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'emerald-green' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'emerald-green' ? 'border-emerald-800 bg-emerald-50 text-emerald-900 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>أخضر زمردي (Emerald)</span>
+                        <span className="w-4 h-4 rounded bg-emerald-800 shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'amber-gold' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'amber-gold' ? 'border-amber-800 bg-amber-50 text-amber-900 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>ذهبي كلاسيكي (Amber)</span>
+                        <span className="w-4 h-4 rounded bg-amber-600 shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'minimal-dark' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'minimal-dark' ? 'border-slate-800 bg-slate-50 text-slate-900 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>الأسود والأبيض البسيط</span>
+                        <span className="w-4 h-4 rounded-full bg-slate-950 border border-slate-900 shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => setConfig({ ...config, themeColor: 'classic-gray' })}
+                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
+                          config.themeColor === 'classic-gray' ? 'border-slate-500 bg-slate-50 text-slate-800 font-bold' : 'border-slate-200'
+                        }`}
+                      >
+                        <span>رمادي كلاسيكي</span>
+                        <span className="w-4 h-4 rounded bg-slate-400 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Table Styling */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">حجم الخط للجدول والبنود</label>
+                      <select 
+                        value={config.fontSize}
+                        onChange={(e) => setConfig({ ...config, fontSize: e.target.value })}
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50"
+                      >
+                        <option value="sm">صغير (مضغوط لعدد سطور كبير)</option>
+                        <option value="base">متوسط (افتراضي)</option>
+                        <option value="lg">كبير (مريح للعين)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">تخطيط الجدول</label>
+                      <select 
+                        value={config.tableStyle}
+                        onChange={(e) => setConfig({ ...config, tableStyle: e.target.value })}
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50"
+                      >
+                        <option value="grid">شبكي محاط بالحدود الكاملة</option>
+                        <option value="clean">بسيط بلا شبكة (فقط ترويسة خطية)</option>
+                        <option value="striped">سطور ملونة متبادلة (Striped)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Toggle Fields visibility */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+                    <h4 className="text-xs font-extrabold text-slate-700">التحكم في ظهور حقول الكشف</h4>
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={config.showCompanyHeader}
+                          onChange={(e) => setConfig({ ...config, showCompanyHeader: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض ترويسة الشركة</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={config.showStatementNo}
+                          onChange={(e) => setConfig({ ...config, showStatementNo: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض رقم الكشف</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={config.showDateRange}
+                          onChange={(e) => setConfig({ ...config, showDateRange: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض فترة وتواريخ الكشف</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={config.showTotalQuantity}
+                          onChange={(e) => setConfig({ ...config, showTotalQuantity: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض إجمالي الكميات الكلي</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={config.showGrandTotal}
+                          onChange={(e) => setConfig({ ...config, showGrandTotal: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض مبلغ الإجمالي الكلي</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={header.hasSignatures}
+                          onChange={(e) => setHeader({ ...header, hasSignatures: e.target.checked })}
+                          className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                        />
+                        <span>عرض خانات التواقيع بالأسفل</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Table Column visibility */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+                    <h4 className="text-xs font-extrabold text-slate-700">تعديل الأعمدة المرئية في الجدول</h4>
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                      {Object.keys(config.visibleColumns).map((colKey) => {
+                        const colNames = {
+                          date: 'عمود التاريخ',
+                          rawMaterial: 'عمود مسمى الخام',
+                          quantity: 'عمود الكمية والمكعب',
+                          price: 'عمود سعر الفئة',
+                          total: 'عمود إجمالي القيمة',
+                          costCenter: 'عمود مركز التكلفة/الموقع',
+                          notes: 'عمود الملاحظات الهامشية'
+                        };
+                        return (
+                          <label key={colKey} className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={config.visibleColumns[colKey]}
+                              onChange={(e) => setConfig({
+                                ...config,
+                                visibleColumns: { ...config.visibleColumns, [colKey]: e.target.checked }
+                              })}
+                              className="rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                            />
+                            <span>{colNames[colKey]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SAVE / MANAGE TAB CONTENT */}
+              {activeTab === 'manage' && (
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-slate-800">قائمة الكشوفات وإجراءات التصدير</h3>
+                    <button 
+                      onClick={() => setShowSaveModal(true)}
+                      className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[10px] rounded-md transition-all"
+                    >
+                      حفظ الحالي
+                    </button>
+                  </div>
+
+                  {/* Pre-built Templates */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-slate-500">أو تحميل نموذج كشف جاهز معد مسبقاً:</span>
+                    <div className="flex flex-col gap-2">
+                      {templates.map((tpl, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleLoadTemplate(i)}
+                          className="p-3 text-right text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between transition-all"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{tpl.icon}</span>
+                            <div className="text-right">
+                              <p className="font-extrabold text-slate-800">{tpl.name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">المورد: {tpl.header.supplierName} ({tpl.rows.length} بنود)</p>
+                            </div>
+                          </div>
+                          <Icon name="Plus" className="w-4 h-4 text-slate-400" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Local Storage list */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+                    <h4 className="text-xs font-extrabold text-slate-700">كشوفاتك المحفوظة محلياً ({savedStatements.length})</h4>
+                    
+                    {savedStatements.length === 0 ? (
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs">
+                        <Icon name="Layers" className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-500" />
+                        <p>لا يوجد كشوفات محفوظة حاليًا في متصفحك.</p>
+                        <p className="text-[10px] text-slate-400 mt-1">اضغط على زر حفظ لحفظ حالة العمل الحالية لتتمكن من استدعائها لاحقاً.</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto">
+                        {savedStatements.map((saved) => (
+                          <div
+                            key={saved.id}
+                            onClick={() => handleLoadSaved(saved)}
+                            className="p-3 border border-slate-200 hover:border-slate-400 rounded-xl bg-white flex items-center justify-between cursor-pointer text-xs transition-all shadow-sm group"
+                          >
+                            <div className="text-right">
+                              <p className="font-extrabold text-slate-800 group-hover:text-slate-950">{saved.name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">مورد: {saved.header.supplierName || '—'} | تاريخ التعديل: {saved.updatedAt}</p>
+                            </div>
+                            <button
+                              onClick={(e) => handleDeleteSaved(saved.id, e)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                              title="حذف هذا الكشف المحفوظ"
+                            >
+                              <Icon name="Trash2" className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* JSON export / import */}
+                  <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+                    <h4 className="text-xs font-extrabold text-slate-700">مشاركة ونقل ملفات الكشوفات الكلية</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={handleExportJSON}
+                        className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                      >
+                        <Icon name="Download" className="w-4 h-4 text-slate-500" />
+                        <span>تصدير كملف (.json)</span>
+                      </button>
+
+                      <label className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer text-center">
+                        <Icon name="Upload" className="w-4 h-4 text-slate-500 animate-pulse" />
+                        <span>استيراد ملف (.json)</span>
+                        <input 
+                          type="file" 
+                          accept=".json"
+                          onChange={handleImportJSON}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT AREA: REALTIME A4 PAPERS PREVIEW (7 Cols) */}
+            <div className="lg:col-span-7 flex flex-col items-center justify-start gap-4">
+              
+              {/* Layout Helper Indicator */}
+              <div className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between text-xs text-slate-600 no-print gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="font-bold text-slate-700">معاينة ورقة الطباعة النشطة المعتمدة</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>المقاس المطبق: <b>A4 Portrait</b></span>
+                  <span>الخط الحالي: <b className="uppercase">{config.fontSize === 'sm' ? 'Cairo-Small' : config.fontSize === 'lg' ? 'Cairo-Large' : 'Cairo-Base'}</b></span>
+                </div>
+              </div>
+
+              {/* PHYSICAL A4 REPRESENTATION */}
+              <div 
+                id="a4-print-area"
+                className={`print-page bg-white w-full max-w-[210mm] min-h-[297mm] p-8 md:p-12 shadow-2xl flex flex-col justify-between text-slate-950 select-text relative transition-all ${
+                  config.themeColor === 'high-density' ? 'border-[12px] border-slate-900 ring-4 ring-offset-4 ring-slate-950/10' : 'border border-slate-200 rounded-lg'
+                }`}
+                style={{
+                  fontSize: config.fontSize === 'sm' ? '0.85rem' : config.fontSize === 'lg' ? '1.1rem' : '0.95rem',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Thin visual bar to reflect custom color presets */}
+                <div className={`absolute top-0 left-0 right-0 h-1.5 no-print ${
+                  config.themeColor === 'royal-blue' ? 'bg-blue-600' :
+                  config.themeColor === 'emerald-green' ? 'bg-emerald-600' :
+                  config.themeColor === 'amber-gold' ? 'bg-amber-600' : 'bg-slate-950'
+                }`} />
+
+                {/* Watermark logo (High Density theme style) */}
+                {config.themeColor === 'high-density' && (
+                  <div className="absolute inset-0 opacity-[0.035] pointer-events-none flex items-center justify-center overflow-hidden">
+                    <div className="text-[100px] font-black border-[12px] border-slate-950 p-8 rotate-12 tracking-widest select-none uppercase text-center leading-tight">
+                      {header.rawMaterialType ? header.rawMaterialType : 'SUPPLIER'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Page Content wrapper */}
+                <div className="w-full flex-1 flex flex-col">
+                  
+                  {/* Company Top Header Area */}
+                  {config.showCompanyHeader && (
+                    config.themeColor === 'high-density' ? (
+                      <div className="flex flex-col sm:flex-row items-center justify-between border-b-4 border-slate-900 pb-5 mb-6 gap-4">
+                        <div className="text-right">
+                          <h2 className="text-3xl font-black text-slate-900 leading-none">{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
+                          <p className="text-xs text-slate-500 mt-2">الإدارة المالية</p>
+                        </div>
+                        
+                        <div className="w-16 h-16 bg-slate-900 flex items-center justify-center rounded-sm shrink-0 shadow-md">
+                          <div className="border-2 border-white w-12 h-12 flex items-center justify-center">
+                            <div className="text-white text-base font-black tracking-tighter">{header.logoText ? header.logoText.slice(0, 3) : 'H-D'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-200 pb-5 mb-6 gap-4">
+                        <div className="text-right">
+                          <h2 className={`text-lg font-extrabold tracking-tight ${theme.textAccent}`}>{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
+                          <p className="text-[11px] text-slate-500 mt-1">الإدارة المالية</p>
+                        </div>
+                        
+                        <div className={`px-4 py-2.5 rounded-lg border-2 ${theme.border} flex flex-col items-center justify-center bg-slate-50/60 min-w-[120px]`}>
+                          <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">شعار الشركة</span>
+                          <span className={`text-xs font-black mt-0.5 ${theme.textAccent}`}>{header.logoText || 'الإدارة المالية'}</span>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Document Title bar */}
+                  <div className={`w-full py-3 px-6 rounded-xl border-2 text-center shadow-sm mb-6 ${
+                    config.themeColor === 'high-density' ? 'border-4 border-slate-900 bg-slate-100 text-slate-900' : theme.headerBg
+                  }`}>
+                    <h2 className="text-lg md:text-xl font-extrabold tracking-wide">
+                      {header.title} {header.supplierName ? `/ ${header.supplierName}` : ''} {header.rawMaterialType ? `( ${header.rawMaterialType} )` : ''}
+                    </h2>
+                  </div>
+
+                  {/* Date details parameters bar */}
+                  {config.themeColor === 'high-density' ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3.5 gap-x-6 pb-6 mb-6 text-xs text-slate-900 border-b-2 border-slate-900">
+                      <div className="flex gap-2 items-end">
+                        <span className="font-bold text-slate-800 shrink-0">اسم المورد:</span>
+                        <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-black text-slate-900 text-right">{header.supplierName || '—'}</div>
+                      </div>
+                      <div className="flex gap-2 items-end">
+                        <span className="font-bold text-slate-800 shrink-0">نوع الخام:</span>
+                        <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-bold text-slate-900 text-right">{header.rawMaterialType || '—'}</div>
+                      </div>
+                      {config.showStatementNo && (
+                        <div className="flex gap-2 items-end">
+                          <span className="font-bold text-slate-800 shrink-0">رقم الكشف:</span>
+                          <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-mono font-bold text-slate-900 text-right">{header.statementNo || '—'}</div>
+                        </div>
+                      )}
+                      {config.showDateRange && (
+                        <div className="flex gap-2 items-end">
+                          <span className="font-bold text-slate-800 shrink-0">الفترة الزمنية:</span>
+                          <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-bold text-slate-900 text-right">
+                            {header.dateFrom ? `من ${header.dateFrom}` : ''} {header.dateTo ? `إلى ${header.dateTo}` : ''}
+                            {!header.dateFrom && !header.dateTo ? 'كامل المدة' : ''}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-100 mb-6 text-xs text-slate-800">
+                      <div>
+                        <span className="text-slate-400 block font-bold mb-0.5">اسم المورد:</span>
+                        <span className="font-extrabold text-slate-900">{header.supplierName || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block font-bold mb-0.5">نوع الخام:</span>
+                        <span className="font-extrabold text-slate-900">{header.rawMaterialType || '—'}</span>
+                      </div>
+                      {config.showStatementNo && (
+                        <div>
+                          <span className="text-slate-400 block font-bold mb-0.5">رقم الكشف:</span>
+                          <span className="font-mono font-bold text-slate-900">{header.statementNo || '—'}</span>
+                        </div>
+                      )}
+                      {config.showDateRange && (
+                        <div>
+                          <span className="text-slate-400 block font-bold mb-0.5">فترة الكشف:</span>
+                          <span className="font-bold text-slate-900">
+                            {header.dateFrom ? `من ${header.dateFrom}` : ''} {header.dateTo ? `إلى ${header.dateTo}` : ''}
+                            {!header.dateFrom && !header.dateTo ? 'كامل المدة' : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TABLE CONTAINER AREA */}
+                  <div className="w-full overflow-x-auto mb-6">
+                    <table className={`w-full text-right border-collapse ${
+                      config.tableStyle === 'grid' ? 'border border-slate-300' : 'border-b border-slate-200'
+                    }`}>
+                      <thead>
+                        <tr className={`border-b border-slate-300 text-xs font-bold ${theme.tableHeader}`}>
+                          {config.visibleColumns.date && <th className="p-2.5 border border-slate-300">التاريخ</th>}
+                          {config.visibleColumns.rawMaterial && <th className="p-2.5 border border-slate-300">نوع الخام</th>}
+                          {config.visibleColumns.quantity && <th className="p-2.5 border border-slate-300 text-left">الكمية</th>}
+                          {config.visibleColumns.price && <th className="p-2.5 border border-slate-300 text-left">السعر</th>}
+                          {config.visibleColumns.total && <th className="p-2.5 border border-slate-300 text-left">الإجمالي</th>}
+                          {config.visibleColumns.costCenter && <th className="p-2.5 border border-slate-300">مركز التكلفة</th>}
+                          {config.visibleColumns.notes && <th className="p-2.5 border border-slate-300">ملاحظات</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, index) => {
+                          const rowTotal = (row.quantity || 0) * (row.price || 0);
+                          return (
+                            <tr 
+                              key={row.id} 
+                              className={`text-xs border-b border-slate-200 transition-colors ${
+                                config.tableStyle === 'striped' && index % 2 === 1 ? 'bg-slate-50/80' : ''
+                              }`}
+                            >
+                              {config.visibleColumns.date && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-600 font-mono whitespace-nowrap`}>
+                                  {row.date || '—'}
+                                </td>
+                              )}
+                              {config.visibleColumns.rawMaterial && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-800`}>
+                                  {row.rawMaterial || '—'}
+                                </td>
+                              )}
+                              {config.visibleColumns.quantity && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
+                                  {(row.quantity || 0).toFixed(2)}
+                                </td>
+                              )}
+                              {config.visibleColumns.price && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
+                                  {formatCurrency(row.price || 0)}
+                                </td>
+                              )}
+                              {config.visibleColumns.total && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono font-bold text-slate-900`}>
+                                  {formatCurrency(rowTotal)}
+                                </td>
+                              )}
+                              {config.visibleColumns.costCenter && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} font-medium text-slate-800`}>
+                                  {row.costCenter || '—'}
+                                </td>
+                              )}
+                              {config.visibleColumns.notes && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-500`}>
+                                  {row.notes || '—'}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+
+                        {/* Visual empty padder rows like dense invoices */}
+                        {rows.length < 10 && Array.from({ length: Math.max(0, 5 - rows.length) }).map((_, emptyIdx) => (
+                          <tr key={`empty-${emptyIdx}`} className="h-8 border-b border-slate-200/50">
+                            {config.visibleColumns.date && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.rawMaterial && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.quantity && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.price && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.total && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.costCenter && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.notes && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                          </tr>
+                        ))}
+
+                        {/* SUMMARIES LINE */}
+                        <tr className="font-extrabold bg-slate-100 border-t-2 border-slate-300 text-slate-900">
+                          {/* Label span */}
+                          <td 
+                            colSpan={(config.visibleColumns.rawMaterial ? 1 : 0) + (config.visibleColumns.date ? 1 : 0)} 
+                            className={`p-3 text-right font-extrabold text-xs tracking-wider text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}
+                          >
+                            اجمالي عام
+                          </td>
+
+                          {/* Sum Quantity */}
+                          {config.visibleColumns.quantity && (
+                            <td className={`p-3 text-left font-mono text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
+                              {config.showTotalQuantity ? totalQuantity.toFixed(2) : '—'}
+                            </td>
+                          )}
+
+                          {/* Price spacing */}
+                          {config.visibleColumns.price && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
+
+                          {/* Sum Value */}
+                          {config.visibleColumns.total && (
+                            <td className={`p-3 text-left font-mono text-sm text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
+                              {config.showGrandTotal ? formatCurrency(grandTotal) : '—'}
+                            </td>
+                          )}
+
+                          {/* Other empty cells */}
+                          {config.visibleColumns.costCenter && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
+                          {config.visibleColumns.notes && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Dynamic Arabic Tafqeet lines */}
+                  {config.showGrandTotal && (
+                    <div className={`p-4 rounded-xl border mb-6 text-xs ${theme.footerBg} ${theme.border} font-bold flex items-center justify-between`}>
+                      <span className="text-slate-500 shrink-0 ml-3">المبلغ المرقّم بالحروف:</span>
+                      <span className="text-right flex-1 text-slate-900">{tafqeet(grandTotal)}</span>
+                    </div>
+                  )}
+
+                  {/* Footnote notes parameter */}
+                  {header.additionalNotes && (
+                    <div className="text-right border-r-2 border-slate-300 pr-3.5 py-1 mb-8 text-xs text-slate-500 leading-relaxed italic">
+                      <b>ملاحظة: </b>
+                      <span>{header.additionalNotes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* SIGNATURE AREA PRESET */}
+                {header.hasSignatures && (
+                  <div className="w-full mt-10 border-t border-slate-200 pt-6">
+                    <div className="flex flex-row justify-between items-center gap-6">
+                      {header.signatures.map((sig, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center">
+                          <span className="text-xs font-bold text-slate-600 mb-2">{sig}</span>
+                          {config.themeColor === 'high-density' ? (
+                            <div className="w-36 h-14 bg-slate-50/50 border-2 border-slate-900 rounded-sm relative flex items-center justify-center select-none shadow-sm">
+                              <span className="text-sm font-mono text-slate-300/80 italic tracking-wider font-extrabold rotate-3">APPROVED</span>
+                              <span className="absolute -top-2.5 right-3 text-[9px] text-slate-950 font-black bg-white px-1.5 py-0.5 border border-slate-900 rounded-sm">اعتماد الختم</span>
+                            </div>
+                          ) : (
+                            <div className="w-full border-b border-dashed border-slate-300 mt-4" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </main>
+
+          {/* SAVE CONFIRMATION DIALOG MODAL */}
+          {showSaveModal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 no-print">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl text-right animate-fadeIn">
+                <h3 className="text-base font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                  <Icon name="Save" className="w-5 h-5 text-emerald-500" />
+                  <span>حفظ كشف الحساب الحالي</span>
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">أدخل اسماً مميزاً للكشف لتسهيل مراجعته واسترجاعه لاحقاً من متصفحك.</p>
+                
+                <input 
+                  type="text"
+                  value={currentSaveName}
+                  onChange={(e) => setCurrentSaveName(e.target.value)}
+                  placeholder="مثال: كشف رمل - اسلام - يونيو 2026"
+                  className="w-full border border-slate-200 rounded-lg p-3 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none mb-5"
+                />
+
+                <div className="flex items-center justify-end gap-2.5">
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleSaveToLocalStorage}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-all"
+                  >
+                    حفظ الكشف
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* APP FOOTER */}
+          <footer className="bg-white border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-400 mt-10 no-print">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p>© {new Date().getFullYear()} شركة سامكون للإستثمار العقارى والتعمير — كشوفات الحسابات المعتمدة</p>
+              <div className="flex items-center gap-4 text-slate-300">
+                <span>تخطيط A4 حقيقي</span>
+                <span>•</span>
+                <span>تصدير JSON</span>
+                <span>•</span>
+                <span>تفقيط أوتوماتيكي</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+  </script>
+</body>
+</html>
