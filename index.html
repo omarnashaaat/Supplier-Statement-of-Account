@@ -377,7 +377,9 @@
         rawMaterial: true,
         quantity: true,
         price: true,
-        total: true,
+        debit: true,
+        credit: true,
+        runningBalance: true,
         costCenter: true,
         notes: true,
       },
@@ -385,29 +387,33 @@
 
     const defaultHeader = {
       title: 'كشف حساب المورد',
-      supplierName: 'اسلام ابو صليب',
+      supplierName: 'إسلام أبو صليب',
       rawMaterialType: 'رمل',
       companyName: 'شركة سامكون للإستثمار العقارى والتعمير',
       logoText: 'الإدارة المالية',
       statementNo: 'STA-2026-0012',
       dateFrom: '2026-06-26',
       dateTo: '2026-06-30',
+      initialBalance: 15000.00,
       phone: '',
       address: '',
       additionalNotes: 'برجاء مراجعة الحساب والتوقيع بالاعتماد في نهاية الكشف لتسوية المستحقات.',
       hasSignatures: true,
       signatures: ['توقيع المستلم', 'المراجع المالي', 'اعتماد الإدارة'],
+      logoType: 'none',
+      logoUrl: '',
     };
 
     const defaultRows = [
-      { id: 'r1', date: '2026-06-26', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r2', date: '2026-06-26', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r3', date: '2026-06-27', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r4', date: '2026-06-27', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r5', date: '2026-06-28', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r6', date: '2026-06-29', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r7', date: '2026-06-29', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
-      { id: 'r8', date: '2026-06-30', rawMaterial: 'رمل', quantity: 60.00, price: 195.00, total: 11700.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r1', date: '2026-06-26', rawMaterial: 'رمل سن 1', quantity: 60.00, price: 195.00, total: 11700.00, debit: 0, credit: 11700.00, costCenter: 'مشروع ذا كورد', notes: 'دفعة توريد أولى' },
+      { id: 'r2', date: '2026-06-26', rawMaterial: 'رمل سن 1', quantity: 40.00, price: 195.00, total: 7800.00, debit: 0, credit: 7800.00, costCenter: 'مشروع ذا كورد', notes: 'دفعة توريد ثانية' },
+      { id: 'r3', date: '2026-06-27', rawMaterial: 'رمل ناعم للمباني', quantity: 50.00, price: 180.00, total: 9000.00, debit: 0, credit: 9000.00, costCenter: 'مشروع مول التجمع', notes: 'توريد حوائط' },
+      { id: 'r4', date: '2026-06-27', rawMaterial: 'دفعة نقدية مسددة تحت الحساب', quantity: 0, price: 0, total: 0, debit: 25000.00, credit: 0, costCenter: 'الخزينة الرئيسية', notes: 'سند صرف رقم 1024' },
+      { id: 'r5', date: '2026-06-28', rawMaterial: 'رمل سن 2 ممتاز', quantity: 30.00, price: 210.00, total: 6300.00, debit: 0, credit: 6300.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r6', date: '2026-06-29', rawMaterial: 'سداد دفعة بموجب شيك بنكي', quantity: 0, price: 0, total: 0, debit: 15000.00, credit: 0, costCenter: 'البنك الأهلي المصري', notes: 'شيك رقم 908122' },
+      { id: 'r7', date: '2026-06-29', rawMaterial: 'رمل ناعم للمباني', quantity: 45.00, price: 180.00, total: 8100.00, debit: 0, credit: 8100.00, costCenter: 'مشروع مول التجمع', notes: '' },
+      { id: 'r8', date: '2026-06-30', rawMaterial: 'رمل سن 1', quantity: 50.00, price: 195.00, total: 9750.00, debit: 0, credit: 9750.00, costCenter: 'مشروع ذا كورد', notes: '' },
+      { id: 'r9', date: '2026-06-30', rawMaterial: 'سداد دفعة نقدية مستعجلة', quantity: 0, price: 0, total: 0, debit: 10000.00, credit: 0, costCenter: 'الخزينة الفرعية', notes: 'سند صرف رقم 1099' },
     ];
 
     const templates = [
@@ -430,6 +436,7 @@
           statementNo: 'STA-2026-0045',
           dateFrom: '2026-06-01',
           dateTo: '2026-06-15',
+          initialBalance: 0,
           phone: '',
           address: '',
           additionalNotes: 'الأسعار شاملة التوصيل والضريبة المطبقة والتحميل بالموقع.',
@@ -438,9 +445,10 @@
         },
         config: { ...defaultConfig, themeColor: 'royal-blue' },
         rows: [
-          { id: 'r2-1', date: '2026-06-01', rawMaterial: 'أسمنت مقاوم', quantity: 12.00, price: 2100.00, total: 25200.00, costCenter: 'مشروع فيلا دجلة', notes: 'دفعة صب الأساسات' },
-          { id: 'r2-2', date: '2026-06-05', rawMaterial: 'أسمنت عادي', quantity: 25.00, price: 1950.00, total: 48750.00, costCenter: 'مشروع مول أكتوبر', notes: 'توريد تشطيبات' },
-          { id: 'r2-3', date: '2026-06-10', rawMaterial: 'أسمنت عادي', quantity: 15.00, price: 1950.00, total: 29250.00, costCenter: 'مشروع فيلا دجلة', notes: 'توريد حوائط ومباني' },
+          { id: 'r2-1', date: '2026-06-01', rawMaterial: 'أسمنت مقاوم', quantity: 12.00, price: 2100.00, total: 25200.00, debit: 0, credit: 25200.00, costCenter: 'مشروع فيلا دجلة', notes: 'دفعة صب الأساسات' },
+          { id: 'r2-2', date: '2026-06-05', rawMaterial: 'أسمنت عادي', quantity: 25.00, price: 1950.00, total: 48750.00, debit: 0, credit: 48750.00, costCenter: 'مشروع مول أكتوبر', notes: 'توريد تشطيبات' },
+          { id: 'r2-3', date: '2026-06-08', rawMaterial: 'سداد دفعة تحت الحساب بنكياً', quantity: 0, price: 0, total: 0, debit: 50000.00, credit: 0, costCenter: 'البنك العربي الأفريقي', notes: 'تحويل سريع رقم 8872' },
+          { id: 'r2-4', date: '2026-06-10', rawMaterial: 'أسمنت عادي', quantity: 15.00, price: 1950.00, total: 29250.00, debit: 0, credit: 29250.00, costCenter: 'مشروع فيلا دجلة', notes: 'توريد حوائط ومباني' },
         ],
       }
     ];
@@ -548,8 +556,30 @@
       };
 
       // Realtime calculations
-      const totalQuantity = rows.reduce((sum, row) => sum + (row.quantity || 0), 0);
-      const grandTotal = rows.reduce((sum, row) => sum + ((row.quantity || 0) * (row.price || 0)), 0);
+      const totalQuantity = rows.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0);
+      
+      const totalDebits = rows.reduce((sum, row) => sum + (Number(row.debit) || 0), 0);
+      
+      const totalCredits = rows.reduce((sum, row) => {
+        const rowCredit = Number(row.credit) || (row.quantity && row.price ? (Number(row.quantity) || 0) * (Number(row.price) || 0) : 0);
+        return sum + rowCredit;
+      }, 0);
+
+      const finalOutstandingBalance = (Number(header.initialBalance) || 0) + totalCredits - totalDebits;
+
+      // Calculate running balances for all rows
+      let runningSum = Number(header.initialBalance) || 0;
+      const rowsWithBalances = rows.map((row) => {
+        const rowDebit = Number(row.debit) || 0;
+        const rowCredit = Number(row.credit) || (row.quantity && row.price ? (Number(row.quantity) || 0) * (Number(row.price) || 0) : 0);
+        runningSum = runningSum + rowCredit - rowDebit;
+        return {
+          ...row,
+          computedCredit: rowCredit,
+          computedDebit: rowDebit,
+          runningBalance: runningSum
+        };
+      });
 
       // Input row updates
       const handleUpdateRow = (id, field, value) => {
@@ -557,7 +587,11 @@
           if (row.id === id) {
             const updatedRow = { ...row, [field]: value };
             if (field === 'quantity' || field === 'price') {
-              updatedRow.total = (Number(updatedRow.quantity) || 0) * (Number(updatedRow.price) || 0);
+              const calcTotal = (Number(updatedRow.quantity) || 0) * (Number(updatedRow.price) || 0);
+              updatedRow.total = calcTotal;
+              updatedRow.credit = calcTotal;
+            } else if (field === 'credit') {
+              updatedRow.total = Number(value) || 0;
             }
             return updatedRow;
           }
@@ -574,6 +608,8 @@
           quantity: 0,
           price: rows.length > 0 ? rows[rows.length - 1].price : 0,
           total: 0,
+          debit: 0,
+          credit: 0,
           costCenter: rows.length > 0 ? rows[rows.length - 1].costCenter : '',
           notes: '',
         };
@@ -631,6 +667,7 @@
             ...defaultHeader,
             supplierName: '',
             rawMaterialType: '',
+            initialBalance: 0,
             statementNo: 'STA-' + new Date().getFullYear() + '-0001',
             dateFrom: '',
             dateTo: '',
@@ -642,6 +679,8 @@
             quantity: 0,
             price: 0,
             total: 0,
+            debit: 0,
+            credit: 0,
             costCenter: '',
             notes: '',
           }]);
@@ -1010,6 +1049,17 @@
                     </div>
 
                     <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-500">الرصيد الافتتاحي (أول المدة المستحق للمورد)</label>
+                      <input 
+                        type="number" 
+                        value={header.initialBalance === 0 ? '' : header.initialBalance}
+                        onChange={(e) => setHeader({ ...header, initialBalance: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.00"
+                        className="border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all text-left font-mono"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-500">نوع مادة الخام</label>
                       <input 
                         type="text" 
@@ -1173,26 +1223,45 @@
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                             <div className="flex flex-col gap-0.5">
-                              <label className="text-[9px] font-bold text-slate-400">مركز التكلفة / المشروع</label>
+                              <label className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded text-center">مدين (سداد دفعة للمورد)</label>
                               <input 
-                                type="text" 
-                                value={row.costCenter}
-                                onChange={(e) => handleUpdateRow(row.id, 'costCenter', e.target.value)}
-                                placeholder="اسم المشروع"
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                                type="number" 
+                                value={row.debit === 0 ? '' : row.debit}
+                                onChange={(e) => handleUpdateRow(row.id, 'debit', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className="border border-blue-200 focus:border-blue-500 rounded p-1 text-[11px] font-mono text-left text-blue-900 bg-blue-50/10 outline-none"
                               />
                             </div>
                             <div className="flex flex-col gap-0.5">
-                              <label className="text-[9px] font-bold text-slate-400">ملاحظات البند</label>
+                              <label className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded text-center">دائن (قيمة توريد خام)</label>
                               <input 
-                                type="text" 
-                                value={row.notes}
-                                onChange={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
-                                placeholder="ملاحظات اختيارية"
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                                type="number" 
+                                value={row.credit === 0 ? '' : row.credit}
+                                onChange={(e) => handleUpdateRow(row.id, 'credit', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className="border border-rose-200 focus:border-rose-500 rounded p-1 text-[11px] font-mono text-left text-rose-900 bg-rose-50/10 outline-none"
                               />
+                            </div>
+                            <div className="flex flex-col gap-0.5 col-span-2">
+                              <label className="text-[9px] font-bold text-slate-400">مركز التكلفة / الملاحظات المشتركة</label>
+                              <div className="flex gap-1.5">
+                                <input 
+                                  type="text" 
+                                  value={row.costCenter}
+                                  onChange={(e) => handleUpdateRow(row.id, 'costCenter', e.target.value)}
+                                  placeholder="مركز التكلفة"
+                                  className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 flex-1"
+                                />
+                                <input 
+                                  type="text" 
+                                  value={row.notes}
+                                  onChange={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                                  placeholder="ملاحظات البند"
+                                  className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 flex-1"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1391,10 +1460,12 @@
                       {Object.keys(config.visibleColumns).map((colKey) => {
                         const colNames = {
                           date: 'عمود التاريخ',
-                          rawMaterial: 'عمود مسمى الخام',
+                          rawMaterial: 'عمود البيان / مسمى الخام',
                           quantity: 'عمود الكمية والمكعب',
                           price: 'عمود سعر الفئة',
-                          total: 'عمود إجمالي القيمة',
+                          debit: 'عمود مدين (سداد دفعة)',
+                          credit: 'عمود دائن (توريد خام)',
+                          runningBalance: 'عمود الرصيد التراكمي',
                           costCenter: 'عمود مركز التكلفة/الموقع',
                           notes: 'عمود الملاحظات الهامشية'
                         };
@@ -1565,29 +1636,14 @@
                   {/* Company Top Header Area */}
                   {config.showCompanyHeader && (
                     config.themeColor === 'high-density' ? (
-                      <div className="flex flex-col sm:flex-row items-center justify-between border-b-4 border-slate-900 pb-5 mb-6 gap-4">
-                        <div className="text-right">
-                          <h2 className="text-3xl font-black text-slate-900 leading-none">{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
-                          <p className="text-xs text-slate-500 mt-2">الإدارة المالية</p>
-                        </div>
-                        
-                        <div className="w-16 h-16 bg-slate-900 flex items-center justify-center rounded-sm shrink-0 shadow-md">
-                          <div className="border-2 border-white w-12 h-12 flex items-center justify-center">
-                            <div className="text-white text-base font-black tracking-tighter">{header.logoText ? header.logoText.slice(0, 3) : 'H-D'}</div>
-                          </div>
-                        </div>
+                      <div className="border-b-4 border-slate-900 pb-5 mb-6 text-center sm:text-right">
+                        <h2 className="text-3xl font-black text-slate-900 leading-none">{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
+                        <p className="text-xs text-slate-500 mt-2">الإدارة المالية</p>
                       </div>
                     ) : (
-                      <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-200 pb-5 mb-6 gap-4">
-                        <div className="text-right">
-                          <h2 className={`text-lg font-extrabold tracking-tight ${theme.textAccent}`}>{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
-                          <p className="text-[11px] text-slate-500 mt-1">الإدارة المالية</p>
-                        </div>
-                        
-                        <div className={`px-4 py-2.5 rounded-lg border-2 ${theme.border} flex flex-col items-center justify-center bg-slate-50/60 min-w-[120px]`}>
-                          <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">شعار الشركة</span>
-                          <span className={`text-xs font-black mt-0.5 ${theme.textAccent}`}>{header.logoText || 'الإدارة المالية'}</span>
-                        </div>
+                      <div className="border-b-2 border-slate-200 pb-5 mb-6 text-center sm:text-right">
+                        <h2 className={`text-lg font-extrabold tracking-tight ${theme.textAccent}`}>{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
+                        <p className="text-[11px] text-slate-500 mt-1">الإدارة المالية</p>
                       </div>
                     )
                   )}
@@ -1664,17 +1720,67 @@
                       <thead>
                         <tr className={`border-b border-slate-300 text-xs font-bold ${theme.tableHeader}`}>
                           {config.visibleColumns.date && <th className="p-2.5 border border-slate-300">التاريخ</th>}
-                          {config.visibleColumns.rawMaterial && <th className="p-2.5 border border-slate-300">نوع الخام</th>}
+                          {config.visibleColumns.rawMaterial && <th className="p-2.5 border border-slate-300">البيان / مسمى الخام</th>}
                           {config.visibleColumns.quantity && <th className="p-2.5 border border-slate-300 text-left">الكمية</th>}
                           {config.visibleColumns.price && <th className="p-2.5 border border-slate-300 text-left">السعر</th>}
-                          {config.visibleColumns.total && <th className="p-2.5 border border-slate-300 text-left">الإجمالي</th>}
+                          {config.visibleColumns.debit && <th className="p-2.5 border border-slate-300 text-left">مدين (له)</th>}
+                          {config.visibleColumns.credit && <th className="p-2.5 border border-slate-300 text-left">دائن (عليه)</th>}
+                          {config.visibleColumns.runningBalance && <th className="p-2.5 border border-slate-300 text-left">الرصيد التراكمي</th>}
                           {config.visibleColumns.costCenter && <th className="p-2.5 border border-slate-300">مركز التكلفة</th>}
                           {config.visibleColumns.notes && <th className="p-2.5 border border-slate-300">ملاحظات</th>}
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.map((row, index) => {
-                          const rowTotal = (row.quantity || 0) * (row.price || 0);
+                        {/* Initial Balance Row */}
+                        <tr className="text-xs bg-slate-50 border-b border-slate-200 font-bold">
+                          {config.visibleColumns.date && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-500 font-mono whitespace-nowrap`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.rawMaterial && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-900`}>
+                              الرصيد الافتتاحي (أول المدة المستحق للمورد)
+                            </td>
+                          )}
+                          {config.visibleColumns.quantity && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-400`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.price && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-400`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.debit && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-400`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.credit && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-400`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.runningBalance && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-900 bg-slate-100/50`}>
+                              {formatCurrency(Number(header.initialBalance) || 0)}
+                            </td>
+                          )}
+                          {config.visibleColumns.costCenter && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-400`}>
+                              —
+                            </td>
+                          )}
+                          {config.visibleColumns.notes && (
+                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-400`}>
+                              رصيد منقول
+                            </td>
+                          )}
+                        </tr>
+
+                        {rowsWithBalances.map((row, index) => {
                           return (
                             <tr 
                               key={row.id} 
@@ -1694,17 +1800,27 @@
                               )}
                               {config.visibleColumns.quantity && (
                                 <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
-                                  {(row.quantity || 0).toFixed(2)}
+                                  {row.quantity > 0 ? row.quantity.toFixed(2) : '—'}
                                 </td>
                               )}
                               {config.visibleColumns.price && (
                                 <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
-                                  {formatCurrency(row.price || 0)}
+                                  {row.price > 0 ? formatCurrency(row.price) : '—'}
                                 </td>
                               )}
-                              {config.visibleColumns.total && (
-                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono font-bold text-slate-900`}>
-                                  {formatCurrency(rowTotal)}
+                              {config.visibleColumns.debit && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-blue-900 bg-blue-50/5`}>
+                                  {row.computedDebit > 0 ? formatCurrency(row.computedDebit) : '—'}
+                                </td>
+                              )}
+                              {config.visibleColumns.credit && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-rose-900 bg-rose-50/5`}>
+                                  {row.computedCredit > 0 ? formatCurrency(row.computedCredit) : '—'}
+                                </td>
+                              )}
+                              {config.visibleColumns.runningBalance && (
+                                <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono font-bold text-slate-950 bg-slate-100/30`}>
+                                  {formatCurrency(row.runningBalance)}
                                 </td>
                               )}
                               {config.visibleColumns.costCenter && (
@@ -1722,13 +1838,15 @@
                         })}
 
                         {/* Visual empty padder rows like dense invoices */}
-                        {rows.length < 10 && Array.from({ length: Math.max(0, 5 - rows.length) }).map((_, emptyIdx) => (
+                        {rowsWithBalances.length < 10 && Array.from({ length: Math.max(0, 5 - rowsWithBalances.length) }).map((_, emptyIdx) => (
                           <tr key={`empty-${emptyIdx}`} className="h-8 border-b border-slate-200/50">
                             {config.visibleColumns.date && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                             {config.visibleColumns.rawMaterial && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                             {config.visibleColumns.quantity && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                             {config.visibleColumns.price && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                            {config.visibleColumns.total && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.debit && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.credit && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                            {config.visibleColumns.runningBalance && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                             {config.visibleColumns.costCenter && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                             {config.visibleColumns.notes && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
                           </tr>
@@ -1741,7 +1859,7 @@
                             colSpan={(config.visibleColumns.rawMaterial ? 1 : 0) + (config.visibleColumns.date ? 1 : 0)} 
                             className={`p-3 text-right font-extrabold text-xs tracking-wider text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}
                           >
-                            اجمالي عام
+                            الإجماليات وصافي الرصيد المستحق
                           </td>
 
                           {/* Sum Quantity */}
@@ -1754,10 +1872,24 @@
                           {/* Price spacing */}
                           {config.visibleColumns.price && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
 
-                          {/* Sum Value */}
-                          {config.visibleColumns.total && (
-                            <td className={`p-3 text-left font-mono text-sm text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
-                              {config.showGrandTotal ? formatCurrency(grandTotal) : '—'}
+                          {/* Sum Debit */}
+                          {config.visibleColumns.debit && (
+                            <td className={`p-3 text-left font-mono text-sm text-blue-900 bg-blue-100/30 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
+                              {formatCurrency(totalDebits)}
+                            </td>
+                          )}
+
+                          {/* Sum Credit */}
+                          {config.visibleColumns.credit && (
+                            <td className={`p-3 text-left font-mono text-sm text-rose-900 bg-rose-100/30 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
+                              {formatCurrency(totalCredits)}
+                            </td>
+                          )}
+
+                          {/* Net Outstanding Balance */}
+                          {config.visibleColumns.runningBalance && (
+                            <td className={`p-3 text-left font-mono text-sm font-black text-slate-950 bg-slate-200 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
+                              {formatCurrency(finalOutstandingBalance)}
                             </td>
                           )}
 
@@ -1772,8 +1904,11 @@
                   {/* Dynamic Arabic Tafqeet lines */}
                   {config.showGrandTotal && (
                     <div className={`p-4 rounded-xl border mb-6 text-xs ${theme.footerBg} ${theme.border} font-bold flex items-center justify-between`}>
-                      <span className="text-slate-500 shrink-0 ml-3">المبلغ المرقّم بالحروف:</span>
-                      <span className="text-right flex-1 text-slate-900">{tafqeet(grandTotal)}</span>
+                      <span className="text-slate-500 shrink-0 ml-3">صافي الرصيد المستحق بالحروف:</span>
+                      <span className="text-right flex-1 text-slate-900">
+                        {tafqeet(Math.abs(finalOutstandingBalance))} 
+                        {finalOutstandingBalance > 0 ? ' (رصيد دائن للمورد)' : finalOutstandingBalance < 0 ? ' (رصيد مدين مدفوع مقدماً للمورد)' : ' (حساب مطابق ومصفى)'}
+                      </span>
                     </div>
                   )}
 

@@ -1,55 +1,36 @@
-export interface StatementRow {
+export interface JournalLine {
   id: string;
-  date: string;
-  rawMaterial: string;
-  quantity: number;
-  price: number;
-  total: number;
-  costCenter: string;
-  notes: string;
+  debit: number;   // مدين
+  credit: number;  // دائن
+  accountCode: string; // رقم الحساب
+  accountName: string; // اسم الحساب
+  costCenter: string;  // مركز التكلفة
+  branch: string;      // الفرع / المشروع
+  notes: string;       // البيان / الوصف
+  isApproved?: boolean; // اعتماد السطر
 }
 
-export interface StatementHeader {
-  title: string;
-  supplierName: string;
-  rawMaterialType: string;
+export interface JournalEntry {
+  id: string;
+  entryNo: string;     // رقم القيد
+  date: string;        // تاريخ القيد
+  currency: string;    // العملة
+  notes: string;       // ملاحظات عامة
+  status: 'draft' | 'balanced' | 'approved' | 'posted';
+  attachments: { id: string; name: string; url: string; size: string }[];
+  lines: JournalLine[];
+}
+
+export interface SystemConfig {
+  darkMode: boolean;
   companyName: string;
-  logoText: string;
-  statementNo: string;
-  dateFrom: string;
-  dateTo: string;
-  phone: string;
-  address: string;
-  additionalNotes: string;
-  hasSignatures: boolean;
-  signatures: string[]; // List of signature titles, e.g. ["توقيع المستلم", "توقيع الحسابات", "توقيع المدير"]
+  logoType: 'default' | 'custom' | 'none';
+  logoUrl: string;
 }
 
-export interface StatementConfig {
-  themeColor: 'classic-gray' | 'royal-blue' | 'emerald-green' | 'amber-gold' | 'minimal-dark' | 'high-density';
-  tableStyle: 'grid' | 'clean' | 'striped';
-  fontSize: 'sm' | 'base' | 'lg';
-  showCompanyHeader: boolean;
-  showStatementNo: boolean;
-  showDateRange: boolean;
-  showTotalQuantity: boolean;
-  showGrandTotal: boolean;
-  visibleColumns: {
-    date: boolean;
-    rawMaterial: boolean;
-    quantity: boolean;
-    price: boolean;
-    total: boolean;
-    costCenter: boolean;
-    notes: boolean;
-  };
-}
-
-export interface SavedStatement {
+export interface SavedJournal {
   id: string;
-  name: string; // Saved name, e.g., "كشف رمل إسلام - يونيو"
+  name: string;
   updatedAt: string;
-  header: StatementHeader;
-  rows: StatementRow[];
-  config: StatementConfig;
+  entry: JournalEntry;
 }

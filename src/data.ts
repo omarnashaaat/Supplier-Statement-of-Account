@@ -1,250 +1,234 @@
-import { SavedStatement, StatementConfig, StatementHeader, StatementRow } from './types';
+import { JournalEntry, JournalLine, SavedJournal } from './types';
 
 // Helper to generate IDs
-const generateId = () => Math.random().toString(36).substr(2, 9);
+export const generateId = () => Math.random().toString(36).substr(2, 9);
 
-// Default Configuration
-export const defaultConfig: StatementConfig = {
-  themeColor: 'classic-gray',
-  tableStyle: 'grid',
-  fontSize: 'base',
-  showCompanyHeader: true,
-  showStatementNo: true,
-  showDateRange: true,
-  showTotalQuantity: true,
-  showGrandTotal: true,
-  visibleColumns: {
-    date: true,
-    rawMaterial: true,
-    quantity: true,
-    price: true,
-    total: true,
-    costCenter: true,
-    notes: true,
-  },
-};
-
-// Default Header (Islam Abu Salib template)
-export const defaultHeader: StatementHeader = {
-  title: 'كشف حساب المورد',
-  supplierName: 'اسلام ابو صليب',
-  rawMaterialType: 'رمل',
-  companyName: 'شركة سامكون للإستثمار العقارى والتعمير',
-  logoText: 'الإدارة المالية',
-  statementNo: 'STA-2026-0012',
-  dateFrom: '2026-06-26',
-  dateTo: '2026-06-30',
-  phone: '',
-  address: '',
-  additionalNotes: 'برجاء مراجعة الحساب والتوقيع بالاعتماد في نهاية الكشف لتسوية المستحقات.',
-  hasSignatures: true,
-  signatures: ['توقيع المستلم', 'المراجع المالي', 'اعتماد الإدارة'],
-};
-
-// Default Rows (User's Exact Example)
-export const defaultRows: StatementRow[] = [
-  {
-    id: generateId(),
-    date: '2026-06-26',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-26',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-27',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-27',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-28',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-29',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-29',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
-  {
-    id: generateId(),
-    date: '2026-06-30',
-    rawMaterial: 'رمل',
-    quantity: 60.00,
-    price: 195.00,
-    total: 11700.00,
-    costCenter: 'مشروع ذا كورد',
-    notes: '',
-  },
+// Chart of Accounts (دليل الحسابات)
+export const chartOfAccounts = [
+  { code: '1101', name: 'الصندوق - النقدية بالخزينة الرئيسية' },
+  { code: '1102', name: 'البنك الأهلي المصري - حساب جاري' },
+  { code: '1103', name: 'بنك مصر - حساب العمليات' },
+  { code: '1201', name: 'العملاء - شركة بالم هيلز للتطوير' },
+  { code: '1202', name: 'العملاء - أوراسكوم للإنشاءات' },
+  { code: '1203', name: 'العملاء - شركة طلعت مصطفى' },
+  { code: '1301', name: 'عهد الموظفين - عهدة المهندس أحمد السعيد' },
+  { code: '1302', name: 'سلف الموظفين - سلفيات العاملين' },
+  { code: '1401', name: 'مخازن المواد الخام - أسمنت وحديد' },
+  { code: '1501', name: 'الأصول الثابتة - آلات ومعدات موقع' },
+  { code: '1502', name: 'الأصول الثابتة - سيارات نقل ثقيل' },
+  { code: '2101', name: 'الموردين - شركة السويس للأسمنت' },
+  { code: '2102', name: 'الموردين - حديد عز الدخيلة' },
+  { code: '2103', name: 'الموردين - شركة مقاولات الباطن (سعد الدين)' },
+  { code: '2104', name: 'الموردين - أولاد فوزي للرمل والزلط' },
+  { code: '2201', name: 'مصلحة الضرائب - ضريبة القيمة المضافة' },
+  { code: '2202', name: 'مصلحة الضرائب - ضريبة كسب العمل' },
+  { code: '3101', name: 'إيرادات نشاط المقاولات والتطوير' },
+  { code: '3102', name: 'إيرادات تشغيل معدات للغير' },
+  { code: '4101', name: 'تكاليف النشاط - أجور ومرتبات عمال الموقع' },
+  { code: '4102', name: 'تكاليف النشاط - شراء أسمنت وحديد تسليح' },
+  { code: '4103', name: 'تكاليف النشاط - إيجار لودر وحفارات' },
+  { code: '4201', name: 'مصروفات عمومية وإدارية - كهرباء ومياه' },
+  { code: '4202', name: 'مصروفات عمومية وإدارية - إيجار مقر الشركة الرئيسية' },
 ];
 
-// Predefined Templates
-export const templates: { name: string; icon: string; header: StatementHeader; rows: StatementRow[]; config: StatementConfig }[] = [
-  {
-    name: 'كشف حساب إسلام أبو صليب (رمل)',
-    icon: '🏗️',
-    header: defaultHeader,
-    rows: defaultRows,
-    config: defaultConfig,
-  },
-  {
-    name: 'كشف توريد أسمنت بورتلاندي',
-    icon: '🧱',
-    header: {
-      title: 'كشف حساب المورد',
-      supplierName: 'الشركة العربية للأسمنت',
-      rawMaterialType: 'أسمنت بورتلاندي',
-      companyName: 'مؤسسة الإنشاءات الفنية للتعمير',
-      logoText: 'رؤية معمارية',
-      statementNo: 'STA-2026-0045',
-      dateFrom: '2026-06-01',
-      dateTo: '2026-06-15',
-      phone: '01239876543',
-      address: 'الجيزة، الشيخ زايد',
-      additionalNotes: 'الأسعار شاملة التوصيل والضريبة المطبقة والتحميل بالموقع.',
-      hasSignatures: true,
-      signatures: ['أمين المستودع', 'المراجع الهندسي', 'المدير المالي'],
-    },
-    config: {
-      ...defaultConfig,
-      themeColor: 'royal-blue',
-    },
-    rows: [
-      {
-        id: generateId(),
-        date: '2026-06-01',
-        rawMaterial: 'أسمنت مقاوم',
-        quantity: 12.00,
-        price: 2100.00,
-        total: 25200.00,
-        costCenter: 'مشروع فيلا دجلة',
-        notes: 'دفعة صب الأساسات',
-      },
-      {
-        id: generateId(),
-        date: '2026-06-05',
-        rawMaterial: 'أسمنت عادي',
-        quantity: 25.00,
-        price: 1950.00,
-        total: 48750.00,
-        costCenter: 'مشروع مول أكتوبر',
-        notes: 'توريد تشطيبات',
-      },
-      {
-        id: generateId(),
-        date: '2026-06-10',
-        rawMaterial: 'أسمنت عادي',
-        quantity: 15.00,
-        price: 1950.00,
-        total: 29250.00,
-        costCenter: 'مشروع فيلا دجلة',
-        notes: 'توريد حوائط ومباني',
-      },
-    ],
-  },
-  {
-    name: 'كشف توريد حديد تسليح',
-    icon: '⚡',
-    header: {
-      title: 'بيان توريدات الحديد',
-      supplierName: 'حديد عز للتجارة',
-      rawMaterialType: 'حديد تسليح',
-      companyName: 'سكاي لاين للمقاولات الحديثة',
-      logoText: 'SkyLine',
-      statementNo: 'STA-2026-0110',
-      dateFrom: '2026-06-15',
-      dateTo: '2026-06-25',
-      phone: '01509988771',
-      address: 'القاهرة الجديدة، التجمع الخامس',
-      additionalNotes: 'تم الاستلام بوزن البسكول المعتمد للشركة.',
-      hasSignatures: true,
-      signatures: ['المهندس المنفذ', 'المدير الفني', 'المدير العام'],
-    },
-    config: {
-      ...defaultConfig,
-      themeColor: 'amber-gold',
-    },
-    rows: [
-      {
-        id: generateId(),
-        date: '2026-06-15',
-        rawMaterial: 'حديد 16 مم',
-        quantity: 5.50,
-        price: 38500.00,
-        total: 211750.00,
-        costCenter: 'مشروع برج النور',
-        notes: 'مرحلة صب أعمدة البدروم',
-      },
-      {
-        id: generateId(),
-        date: '2026-06-22',
-        rawMaterial: 'حديد 12 مم',
-        quantity: 4.20,
-        price: 38500.00,
-        total: 161700.00,
-        costCenter: 'مشروع برج النور',
-        notes: 'مرحلة سقف البدروم',
-      },
-    ],
-  },
+// Cost Centers (مراكز التكلفة)
+export const costCenters = [
+  'مشروع ذا كورد - العاصمة الإدارية',
+  'مشروع أبراج العلمين الجديدة - المرحلة الثانية',
+  'مشروع كمبوند بادية - أكتوبر',
+  'مشروع نفق الشهيد أحمد حمدي 2',
+  'الفرع الرئيسي - الإدارة العامة للشركة',
+  'ورش الصيانة والمعدات المركزية',
 ];
 
-// Helper: Format Currencies elegantly in Arabic format (e.g. 11,700.00)
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
+// Branches (الفروع)
+export const branches = [
+  'فرع القاهرة الكبرى',
+  'فرع الإسكندرية والساحل',
+  'فرع الدلتا والقناة',
+  'فرع الصعيد والوجه القبلي',
+];
+
+// Currencies (العملات)
+export const currencies = [
+  { code: 'EGP', symbol: 'ج.م', name: 'الجنيه المصري' },
+  { code: 'USD', symbol: '$', name: 'الدولار الأمريكي' },
+  { code: 'EUR', symbol: '€', name: 'اليورو' },
+  { code: 'SAR', symbol: 'ر.س', name: 'الريال السعودي' },
+];
+
+// Sample Initial Attachments
+export const initialAttachments = [
+  {
+    id: 'att-1',
+    name: 'فاتورة_شراء_أسمنت_رقم_2044.png',
+    url: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=150&auto=format&fit=crop&q=60',
+    size: '1.2 MB'
+  },
+  {
+    id: 'att-2',
+    name: 'سند_صرف_خزينة_موقع_العلمين.jpg',
+    url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=150&auto=format&fit=crop&q=60',
+    size: '720 KB'
+  }
+];
+
+// Initial Balanced Journal Entry (from first screenshot)
+export const initialJournalEntry: JournalEntry = {
+  id: 'jv-active',
+  entryNo: 'JV-2026/0014',
+  date: '2026-06-21',
+  currency: 'EGP',
+  notes: 'قيد تسوية شراء مواد بناء (أسمنت تسليح وحديد) لموقع مشروع أبراج العلمين وموقع العاصمة الإدارية بالتنسيق مع الحسابات المركزية.',
+  status: 'balanced',
+  attachments: [...initialAttachments],
+  lines: [
+    {
+      id: generateId(),
+      debit: 150000,
+      credit: 0,
+      accountCode: '4102',
+      accountName: 'تكاليف النشاط - شراء أسمنت وحديد تسليح',
+      costCenter: 'مشروع أبراج العلمين الجديدة - المرحلة الثانية',
+      branch: 'فرع الإسكندرية والساحل',
+      notes: 'شراء كمية 50 طن أسمنت بورتلاندي لموقع العلمين',
+      isApproved: true,
+    },
+    {
+      id: generateId(),
+      debit: 0,
+      credit: 150000,
+      accountCode: '2101',
+      accountName: 'الموردين - شركة السويس للأسمنت',
+      costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+      branch: 'فرع القاهرة الكبرى',
+      notes: 'قيمة فاتورة شركة السويس رقم 2044 الآجلة',
+      isApproved: true,
+    },
+    {
+      id: generateId(),
+      debit: 45000,
+      credit: 0,
+      accountCode: '4101',
+      accountName: 'تكاليف النشاط - أجور ومرتبات عمال الموقع',
+      costCenter: 'مشروع ذا كورد - العاصمة الإدارية',
+      branch: 'فرع القاهرة الكبرى',
+      notes: 'صرف دفعة تحت الحساب لعمال صب الخرسانة بالأسبوع الثالث',
+      isApproved: true,
+    },
+    {
+      id: generateId(),
+      debit: 0,
+      credit: 45000,
+      accountCode: '1101',
+      accountName: 'الصندوق - النقدية بالخزينة الرئيسية',
+      costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+      branch: 'فرع القاهرة الكبرى',
+      notes: 'صرف نقدي بموجب سند صرف رقم 482 عهدة م. أحمد السعيد',
+      isApproved: true,
+    }
+  ]
+};
+
+// Historical Saved Entries (for Search/Filter and templates)
+export const initialSavedJournals: SavedJournal[] = [
+  {
+    id: 'sj-1',
+    name: 'قيد تسوية أسمنت العلمين',
+    updatedAt: '2026-06-21 11:43',
+    entry: { ...initialJournalEntry }
+  },
+  {
+    id: 'sj-2',
+    name: 'قيد رواتب موظفي الإدارة - مايو 2026',
+    updatedAt: '2026-05-31 16:30',
+    entry: {
+      id: 'jv-saved-2',
+      entryNo: 'JV-2026/0010',
+      date: '2026-05-31',
+      currency: 'EGP',
+      notes: 'قيد إثبات وصرف رواتب موظفي وعاملي الإدارة المركزية والمهندسين لشهر مايو 2026.',
+      status: 'approved',
+      attachments: [],
+      lines: [
+        {
+          id: generateId(),
+          debit: 120000,
+          credit: 0,
+          accountCode: '4101',
+          accountName: 'تكاليف النشاط - أجور ومرتبات عمال الموقع',
+          costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+          branch: 'فرع القاهرة الكبرى',
+          notes: 'رواتب مهندسي المواقع لشهر مايو',
+          isApproved: true,
+        },
+        {
+          id: generateId(),
+          debit: 0,
+          credit: 120000,
+          accountCode: '1102',
+          accountName: 'البنك الأهلي المصري - حساب جاري',
+          costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+          branch: 'فرع القاهرة الكبرى',
+          notes: 'تحويل بنكي لرواتب المهندسين - البنك الأهلي',
+          isApproved: true,
+        }
+      ]
+    }
+  },
+  {
+    id: 'sj-3',
+    name: 'إثبات دفعة عملاء كمبوند بادية',
+    updatedAt: '2026-06-15 09:15',
+    entry: {
+      id: 'jv-saved-3',
+      entryNo: 'JV-2026/0012',
+      date: '2026-06-15',
+      currency: 'EGP',
+      notes: 'إثبات تحصيل دفعة الحجز الأولى من العميل بالم هيلز بخصوص مستخلص رقم 4.',
+      status: 'approved',
+      attachments: [],
+      lines: [
+        {
+          id: generateId(),
+          debit: 500000,
+          credit: 0,
+          accountCode: '1102',
+          accountName: 'البنك الأهلي المصري - حساب جاري',
+          costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+          branch: 'فرع القاهرة الكبرى',
+          notes: 'تحصيل شيك بالم هيلز في البنك الأهلي',
+          isApproved: true,
+        },
+        {
+          id: generateId(),
+          debit: 0,
+          credit: 500000,
+          accountCode: '3101',
+          accountName: 'إيرادات نشاط المقاولات والتطوير',
+          costCenter: 'مشروع كمبوند بادية - أكتوبر',
+          branch: 'فرع الجيزة',
+          notes: 'مستخلص صب خرسانة رقم 4 - بالم هيلز',
+          isApproved: true,
+        }
+      ]
+    }
+  }
+];
+
+// Helper to format currency values to Arabic Style (e.g., 150,000.00 ج.م)
+export function formatCurrency(value: number, currencyCode: string = 'EGP'): string {
+  const formatter = new Intl.NumberFormat('ar-EG', {
+    style: 'decimal',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  });
+  
+  const symbol = currencyCode === 'EGP' ? 'ج.م' : currencyCode === 'USD' ? '$' : currencyCode === 'EUR' ? '€' : currencyCode;
+  return `${formatter.format(value)} ${symbol}`;
 }
 
-// Helper: Arabic number to Arabic words (Tafqeet)
+// Full Tafqeet implementation for converting numbers into elegant Arabic financial narration text
 export function tafqeet(num: number): string {
   if (num === 0) return 'صفر جنيه فقط لا غير';
 
@@ -257,8 +241,6 @@ export function tafqeet(num: number): string {
 
   const parts = Math.floor(num).toString().padStart(6, '0').split('');
   
-  // Handling standard numbers under 1,000,000
-  // Index map for 6-digit: [100k, 10k, 1k, 100, 10, 1]
   const th100 = parseInt(parts[0]);
   const th10 = parseInt(parts[1]);
   const th1 = parseInt(parts[2]);

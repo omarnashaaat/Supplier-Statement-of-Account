@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Printer, 
   Plus, 
@@ -9,1436 +9,1276 @@ import {
   Download, 
   Upload, 
   Save, 
-  Layout, 
   Eye, 
-  Settings, 
   Calendar, 
-  DollarSign, 
-  FileText, 
   Check, 
   Edit3, 
   Layers, 
   User, 
-  CheckCircle,
-  HelpCircle,
-  TrendingUp,
-  Share2,
-  FileSpreadsheet,
-  Info
+  HelpCircle, 
+  FileSpreadsheet, 
+  Info, 
+  Image as ImageIcon,
+  Search,
+  ArrowLeftRight,
+  X,
+  AlertTriangle,
+  Moon,
+  Sun,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  Database,
+  Building,
+  Percent
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+
+import { JournalEntry, JournalLine, SavedJournal, SystemConfig } from './types';
 import { 
-  StatementRow, 
-  StatementHeader, 
-  StatementConfig, 
-  SavedStatement 
-} from './types';
-import { 
-  defaultConfig, 
-  defaultHeader, 
-  defaultRows, 
-  templates, 
+  generateId, 
+  chartOfAccounts, 
+  costCenters, 
+  branches, 
+  currencies, 
+  initialJournalEntry, 
+  initialSavedJournals, 
   formatCurrency, 
   tafqeet 
 } from './data';
 
+// Modular Sub-components
+import ReportModal from './components/ReportModal';
+import DepartmentModal from './components/DepartmentModal';
+import PrintVoucher from './components/PrintVoucher';
+
 export default function App() {
-  // State for the active statement (using lazy state initialization from localStorage for robustness)
-  const [header, setHeader] = useState<StatementHeader>(() => {
-    const saved = localStorage.getItem('current_statement_header');
-    return saved ? JSON.parse(saved) : defaultHeader;
+  // --- STATE SYSTEM ---
+  const [activeEntry, setActiveEntry] = useState<JournalEntry>(() => {
+    const saved = localStorage.getItem('active_journal_entry');
+    return saved ? JSON.parse(saved) : initialJournalEntry;
   });
-  const [rows, setRows] = useState<StatementRow[]>(() => {
-    const saved = localStorage.getItem('current_statement_rows');
-    return saved ? JSON.parse(saved) : defaultRows;
+
+  const [savedJournals, setSavedJournals] = useState<SavedJournal[]>(() => {
+    const saved = localStorage.getItem('saved_journals_list');
+    return saved ? JSON.parse(saved) : initialSavedJournals;
   });
-  const [config, setConfig] = useState<StatementConfig>(() => {
-    const saved = localStorage.getItem('current_statement_config');
-    return saved ? JSON.parse(saved) : defaultConfig;
+
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('system_dark_mode') === 'true';
   });
-  const [activeSavedId, setActiveSavedId] = useState<string | null>(() => {
-    return localStorage.getItem('current_statement_active_id') || null;
-  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
   
-  // Local storage lists
-  const [savedStatements, setSavedStatements] = useState<SavedStatement[]>([]);
-  const [currentSaveName, setCurrentSaveName] = useState('');
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'design' | 'manage'>('editor');
-  const [showGuide, setShowGuide] = useState(false);
+  // Realtime clock state
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Search Filters for Search panel
+  const [filterEntryNo, setFilterEntryNo] = useState('');
+  const [filterAccount, setFilterAccount] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+  const [filterCostCenter, setFilterCostCenter] = useState('');
+
+  // Modals controllers
+  const [activeReport, setActiveReport] = useState<'journal' | 'ledger' | 'trial' | 'income' | 'balance' | 'cashflow' | null>(null);
+  const [activeDepartment, setActiveDepartment] = useState<'accounts' | 'banks' | 'suppliers' | 'customers' | 'assets' | 'taxes' | 'lcs' | 'warehouses' | 'approvals' | null>(null);
+  const [showPrintVoucher, setShowPrintVoucher] = useState(false);
+
+  // Toast System
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Load saved statements on startup
+  // --- PERSISTENCE & TIMERS ---
   useEffect(() => {
-    const saved = localStorage.getItem('supplier_statements');
-    if (saved) {
-      try {
-        setSavedStatements(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load statements from local storage', e);
-      }
-    }
+    localStorage.setItem('active_journal_entry', JSON.stringify(activeEntry));
+  }, [activeEntry]);
+
+  useEffect(() => {
+    localStorage.setItem('saved_journals_list', JSON.stringify(savedJournals));
+  }, [savedJournals]);
+
+  useEffect(() => {
+    localStorage.setItem('system_dark_mode', darkMode.toString());
+  }, [darkMode]);
+
+  // Live Clock Ticker
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Auto-save active state to local storage on any change
-  useEffect(() => {
-    localStorage.setItem('current_statement_header', JSON.stringify(header));
-  }, [header]);
-
-  useEffect(() => {
-    localStorage.setItem('current_statement_rows', JSON.stringify(rows));
-  }, [rows]);
-
-  useEffect(() => {
-    localStorage.setItem('current_statement_config', JSON.stringify(config));
-  }, [config]);
-
-  useEffect(() => {
-    if (activeSavedId) {
-      localStorage.setItem('current_statement_active_id', activeSavedId);
-    } else {
-      localStorage.removeItem('current_statement_active_id');
-    }
-  }, [activeSavedId]);
-
-  // Automatically update the savedStatements list if editing a loaded statement!
-  useEffect(() => {
-    if (!activeSavedId) return;
-    
-    setSavedStatements(prev => {
-      const existing = prev.find(s => s.id === activeSavedId);
-      if (!existing) return prev;
-      
-      // Compare to prevent infinite rendering loops
-      if (
-        JSON.stringify(existing.header) === JSON.stringify(header) &&
-        JSON.stringify(existing.rows) === JSON.stringify(rows) &&
-        JSON.stringify(existing.config) === JSON.stringify(config)
-      ) {
-        return prev;
-      }
-      
-      const updated = prev.map(s => {
-        if (s.id === activeSavedId) {
-          return {
-            ...s,
-            header,
-            rows,
-            config,
-            updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' })
-          };
-        }
-        return s;
-      });
-      
-      localStorage.setItem('supplier_statements', JSON.stringify(updated));
-      return updated;
-    });
-  }, [header, rows, config, activeSavedId]);
-
-  // Toast notifier
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
+    setTimeout(() => setToast(null), 4000);
   };
 
-  // Calculations
-  const totalQuantity = rows.reduce((sum, row) => sum + (row.quantity || 0), 0);
-  const grandTotal = rows.reduce((sum, row) => sum + ((row.quantity || 0) * (row.price || 0)), 0);
+  // --- CALCULATIONS ---
+  const totalDebit = activeEntry.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0);
+  const totalCredit = activeEntry.lines.reduce((sum, line) => sum + (Number(line.credit) || 0), 0);
+  const difference = Math.abs(totalDebit - totalCredit);
+  const isBalanced = difference === 0;
 
-  // Handle single cell update
-  const handleUpdateRow = (id: string, field: keyof StatementRow, value: any) => {
-    setRows(prevRows => prevRows.map(row => {
-      if (row.id === id) {
-        const updatedRow = { ...row, [field]: value };
-        if (field === 'quantity' || field === 'price') {
-          updatedRow.total = (Number(updatedRow.quantity) || 0) * (Number(updatedRow.price) || 0);
+  // --- ACTIONS SYSTEM ---
+
+  // Handle line item cell updates
+  const handleUpdateLine = (id: string, field: keyof JournalLine, value: any) => {
+    setActiveEntry(prev => {
+      const updatedLines = prev.lines.map(line => {
+        if (line.id === id) {
+          const updated = { ...line, [field]: value };
+          // If debit changes to > 0, make credit 0 (standard helper)
+          if (field === 'debit' && Number(value) > 0) {
+            updated.credit = 0;
+          }
+          // If credit changes to > 0, make debit 0
+          if (field === 'credit' && Number(value) > 0) {
+            updated.debit = 0;
+          }
+          // Autofill accountName when accountCode changes
+          if (field === 'accountCode') {
+            const matchedAcc = chartOfAccounts.find(a => a.code === value);
+            if (matchedAcc) {
+              updated.accountName = matchedAcc.name;
+            }
+          }
+          return updated;
         }
-        return updatedRow;
-      }
-      return row;
-    }));
+        return line;
+      });
+
+      // Recalculate status
+      const sumD = updatedLines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
+      const sumC = updatedLines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
+      const balanced = sumD === sumC;
+
+      return {
+        ...prev,
+        lines: updatedLines,
+        status: balanced ? 'balanced' : 'draft'
+      };
+    });
   };
 
   // Add new blank row
   const handleAddRow = () => {
-    const newRow: StatementRow = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: rows.length > 0 ? rows[rows.length - 1].date : new Date().toISOString().split('T')[0],
-      rawMaterial: header.rawMaterialType || '',
-      quantity: 0,
-      price: rows.length > 0 ? rows[rows.length - 1].price : 0,
-      total: 0,
-      costCenter: rows.length > 0 ? rows[rows.length - 1].costCenter : '',
-      notes: '',
+    const defaultCode = chartOfAccounts[0].code;
+    const defaultName = chartOfAccounts[0].name;
+    const newLine: JournalLine = {
+      id: generateId(),
+      debit: 0,
+      credit: 0,
+      accountCode: defaultCode,
+      accountName: defaultName,
+      costCenter: costCenters[0],
+      branch: branches[0],
+      notes: activeEntry.lines.length > 0 ? activeEntry.lines[activeEntry.lines.length - 1].notes : 'شرح قيد اليومية',
+      isApproved: true,
     };
-    setRows([...rows, newRow]);
-    showToast('تمت إضافة سطر جديد بنجاح', 'success');
+
+    setActiveEntry(prev => ({
+      ...prev,
+      lines: [...prev.lines, newLine]
+    }));
+    showToast('تمت إضافة سطر قيد جديد بنجاح', 'success');
   };
 
-  // Duplicate a row
-  const handleDuplicateRow = (id: string) => {
-    const rowToCopy = rows.find(r => r.id === id);
-    if (rowToCopy) {
-      const newRow: StatementRow = {
-        ...rowToCopy,
-        id: Math.random().toString(36).substr(2, 9),
-      };
-      const index = rows.findIndex(r => r.id === id);
-      const updatedRows = [...rows];
-      updatedRows.splice(index + 1, 0, newRow);
-      setRows(updatedRows);
-      showToast('تم تكرار السطر بنجاح', 'info');
-    }
-  };
-
-  // Delete a row
+  // Delete line row
   const handleDeleteRow = (id: string) => {
-    if (rows.length <= 1) {
-      showToast('يجب أن يحتوي الكشف على سطر واحد على الأقل', 'error');
+    if (activeEntry.lines.length <= 2) {
+      showToast('يجب وجود سطرين محاسبيين على الأقل في قيد اليومية لتصحيح القيد المزدوج', 'error');
       return;
     }
-    if (window.confirm('هل أنت متأكد من حذف هذا السطر؟')) {
-      setRows(rows.filter(row => row.id !== id));
-      showToast('تم حذف السطر بنجاح', 'info');
-    }
+    setActiveEntry(prev => ({
+      ...prev,
+      lines: prev.lines.filter(l => l.id !== id)
+    }));
+    showToast('تم حذف السطر بنجاح', 'info');
   };
 
-  // Load a template
-  const handleLoadTemplate = (templateIndex: number) => {
-    const t = templates[templateIndex];
-    setHeader({ ...t.header });
-    setRows(t.rows.map(r => ({ ...r, id: Math.random().toString(36).substr(2, 9) })));
-    setConfig({ ...t.config });
-    setActiveSavedId(null);
-    showToast(`تم تحميل نموذج: ${t.name}`, 'success');
-  };
-
-  // Print function
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Reset to empty
-  const handleReset = () => {
-    if (window.confirm('هل أنت متأكد من إعادة تعيين جميع البيانات؟ سيتم مسح الجدول الحالي.')) {
-      setHeader({
-        ...defaultHeader,
-        supplierName: '',
-        rawMaterialType: '',
-        statementNo: 'STA-' + new Date().getFullYear() + '-0001',
-        dateFrom: '',
-        dateTo: '',
-      });
-      setRows([{
-        id: Math.random().toString(36).substr(2, 9),
-        date: new Date().toISOString().split('T')[0],
-        rawMaterial: '',
-        quantity: 0,
-        price: 0,
-        total: 0,
-        costCenter: '',
-        notes: '',
-      }]);
-      setActiveSavedId(null);
-      showToast('تمت إعادة ضبط الكشف بنجاح', 'info');
-    }
-  };
-
-  // Save statement to LocalStorage list
-  const handleSaveToLocalStorage = () => {
-    if (!currentSaveName.trim()) {
-      showToast('برجاء إدخال اسم لحفظ الكشف', 'error');
-      return;
-    }
-
-    const newId = Math.random().toString(36).substr(2, 9);
-    const newSaved: SavedStatement = {
-      id: newId,
-      name: currentSaveName,
-      updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-      header,
-      rows,
-      config,
-    };
-
-    const updatedList = [newSaved, ...savedStatements];
-    setSavedStatements(updatedList);
-    localStorage.setItem('supplier_statements', JSON.stringify(updatedList));
-    setActiveSavedId(newId);
-    setShowSaveModal(false);
-    setCurrentSaveName('');
-    showToast('تم حفظ الكشف بنجاح في القائمة الخاصة بك وبدء الحفظ التلقائي', 'success');
-  };
-
-  // Load a saved statement
-  const handleLoadSaved = (saved: SavedStatement) => {
-    setHeader(saved.header);
-    setRows(saved.rows);
-    setConfig(saved.config);
-    setActiveSavedId(saved.id);
-    showToast(`تم استرجاع الكشف وتفعيل الحفظ التلقائي: ${saved.name}`, 'success');
-  };
-
-  // Delete a saved statement
-  const handleDeleteSaved = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('هل أنت متأكد من حذف هذا الكشف المحفوظ؟')) {
-      const updated = savedStatements.filter(s => s.id !== id);
-      setSavedStatements(updated);
-      localStorage.setItem('supplier_statements', JSON.stringify(updated));
-      if (activeSavedId === id) {
-        setActiveSavedId(null);
-      }
-      showToast('تم حذف الكشف المحفوظ بنجاح', 'info');
-    }
-  };
-
-  // Export as JSON file
-  const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ header, rows, config }, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `كشف_حساب_${header.supplierName || 'مورد'}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    showToast('تم تصدير ملف الكشف بنجاح', 'success');
-  };
-
-  // Import from JSON file
-  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileReader = new FileReader();
-    if (e.target.files && e.target.files[0]) {
-      fileReader.readAsText(e.target.files[0], "UTF-8");
-      fileReader.onload = (event) => {
-        try {
-          const parsed = JSON.parse(event.target?.result as string);
-          if (parsed.header && parsed.rows) {
-            setHeader(parsed.header);
-            setRows(parsed.rows);
-            if (parsed.config) setConfig(parsed.config);
-            setActiveSavedId(null);
-            showToast('تم استيراد الكشف بنجاح وملء البيانات', 'success');
-          } else {
-            showToast('تنسيق الملف غير صالح، يرجى اختيار ملف كشف صحيح', 'error');
-          }
-        } catch (err) {
-          showToast('حدث خطأ أثناء قراءة الملف', 'error');
-        }
+  // Duplicate line row
+  const handleDuplicateRow = (id: string) => {
+    const rowToCopy = activeEntry.lines.find(r => r.id === id);
+    if (rowToCopy) {
+      const newLine: JournalLine = {
+        ...rowToCopy,
+        id: generateId(),
+        isApproved: true,
       };
+      const index = activeEntry.lines.findIndex(r => r.id === id);
+      const updatedLines = [...activeEntry.lines];
+      updatedLines.splice(index + 1, 0, newLine);
+
+      setActiveEntry(prev => ({
+        ...prev,
+        lines: updatedLines
+      }));
+      showToast('تم نسخ وتكرار السطر المحاسبي', 'success');
     }
   };
 
-  // Apply visual theme background/borders
-  const getThemeClasses = () => {
-    switch (config.themeColor) {
-      case 'royal-blue':
-        return {
-          headerBg: 'bg-blue-900 text-white border-blue-900',
-          footerBg: 'bg-blue-50 text-blue-900',
-          border: 'border-blue-200',
-          textAccent: 'text-blue-900',
-          badge: 'bg-blue-100 text-blue-800',
-          tableHeader: 'bg-blue-800 text-white',
-          tableTotal: 'bg-blue-50',
-          inputActive: 'focus:border-blue-500 focus:ring-blue-500',
-          accentBorder: 'border-t-4 border-t-blue-800',
-        };
-      case 'emerald-green':
-        return {
-          headerBg: 'bg-emerald-800 text-white border-emerald-800',
-          footerBg: 'bg-emerald-50 text-emerald-900',
-          border: 'border-emerald-200',
-          textAccent: 'text-emerald-800',
-          badge: 'bg-emerald-100 text-emerald-800',
-          tableHeader: 'bg-emerald-800 text-white',
-          tableTotal: 'bg-emerald-50',
-          inputActive: 'focus:border-emerald-500 focus:ring-emerald-500',
-          accentBorder: 'border-t-4 border-t-emerald-800',
-        };
-      case 'amber-gold':
-        return {
-          headerBg: 'bg-amber-800 text-white border-amber-800',
-          footerBg: 'bg-amber-50 text-amber-900',
-          border: 'border-amber-200',
-          textAccent: 'text-amber-800',
-          badge: 'bg-amber-100 text-amber-800',
-          tableHeader: 'bg-amber-800 text-white',
-          tableTotal: 'bg-amber-50',
-          inputActive: 'focus:border-amber-500 focus:ring-amber-500',
-          accentBorder: 'border-t-4 border-t-amber-800',
-        };
-      case 'high-density':
-        return {
-          headerBg: 'bg-slate-900 text-white border-slate-900',
-          footerBg: 'bg-slate-50 text-slate-900',
-          border: 'border-slate-900',
-          textAccent: 'text-slate-900',
-          badge: 'bg-slate-900 text-white',
-          tableHeader: 'bg-slate-900 text-white',
-          tableTotal: 'bg-slate-100',
-          inputActive: 'focus:border-slate-900 focus:ring-slate-900',
-          accentBorder: 'border-t-4 border-t-slate-900',
-        };
-      case 'minimal-dark':
-        return {
-          headerBg: 'bg-gray-950 text-white border-gray-950',
-          footerBg: 'bg-gray-100 text-gray-950',
-          border: 'border-gray-300',
-          textAccent: 'text-gray-950',
-          badge: 'bg-gray-100 text-gray-900',
-          tableHeader: 'bg-gray-900 text-white',
-          tableTotal: 'bg-gray-100',
-          inputActive: 'focus:border-gray-900 focus:ring-gray-900',
-          accentBorder: 'border-t-4 border-t-gray-900',
-        };
-      case 'classic-gray':
-      default:
-        return {
-          headerBg: 'bg-gray-200 text-gray-800 border-gray-400',
-          footerBg: 'bg-gray-100 text-gray-800',
-          border: 'border-gray-300',
-          textAccent: 'text-gray-800',
-          badge: 'bg-gray-100 text-gray-800',
-          tableHeader: 'bg-gray-200 text-gray-800',
-          tableTotal: 'bg-gray-100',
-          inputActive: 'focus:border-gray-400 focus:ring-gray-400',
-          accentBorder: 'border-t-4 border-t-gray-400',
-        };
+  // Toggle approve single row
+  const handleToggleApproveLine = (id: string) => {
+    setActiveEntry(prev => ({
+      ...prev,
+      lines: prev.lines.map(l => {
+        if (l.id === id) {
+          return { ...l, isApproved: !l.isApproved };
+        }
+        return l;
+      })
+    }));
+    showToast('تم تعديل حالة اعتماد البند الفرعي', 'info');
+  };
+
+  // Clear/Reset current active entry
+  const handleResetEntry = () => {
+    const blankEntry: JournalEntry = {
+      id: 'jv-active',
+      entryNo: `JV-2026/00${savedJournals.length + 15}`,
+      date: new Date().toISOString().split('T')[0],
+      currency: 'EGP',
+      notes: '',
+      status: 'draft',
+      attachments: [],
+      lines: [
+        {
+          id: generateId(),
+          debit: 0,
+          credit: 0,
+          accountCode: chartOfAccounts[0].code,
+          accountName: chartOfAccounts[0].name,
+          costCenter: costCenters[0],
+          branch: branches[0],
+          notes: 'شرح القيد - سطر 1',
+          isApproved: true,
+        },
+        {
+          id: generateId(),
+          debit: 0,
+          credit: 0,
+          accountCode: chartOfAccounts[1].code,
+          accountName: chartOfAccounts[1].name,
+          costCenter: costCenters[0],
+          branch: branches[0],
+          notes: 'شرح القيد - سطر 2',
+          isApproved: true,
+        }
+      ]
+    };
+    setActiveEntry(blankEntry);
+    showToast('تم تفريغ نموذج إدخال القيد وتوليد رقم جديد', 'info');
+  };
+
+  // Save current active entry to Saved history list
+  const handleSaveJournal = () => {
+    if (!isBalanced) {
+      showToast('لا يمكن حفظ قيد غير متوازن! إجمالي المدين يجب أن يساوي الدائن.', 'error');
+      return;
+    }
+
+    const currentNotes = activeEntry.notes || `قيد يومية تسوية رقم ${activeEntry.entryNo}`;
+    const matchedIndex = savedJournals.findIndex(sj => sj.entry.entryNo === activeEntry.entryNo);
+
+    if (matchedIndex > -1) {
+      // Overwrite/update existing
+      const updated = [...savedJournals];
+      updated[matchedIndex] = {
+        id: updated[matchedIndex].id,
+        name: currentNotes.substring(0, 30),
+        updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+        entry: { ...activeEntry, status: 'approved' }
+      };
+      setSavedJournals(updated);
+      showToast('تم تحديث القيد المحفوظ بنجاح في السجلات', 'success');
+    } else {
+      // Save as new
+      const newSaved: SavedJournal = {
+        id: generateId(),
+        name: currentNotes.substring(0, 30) || 'قيد تسوية مواد بناء جديدة',
+        updatedAt: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+        entry: { ...activeEntry, status: 'approved' }
+      };
+      setSavedJournals([newSaved, ...savedJournals]);
+      showToast('تم حفظ واعتماد القيد بنجاح وترحيله للأستاذ', 'success');
     }
   };
 
-  const theme = getThemeClasses();
+  // Load a historic saved entry into active workspace
+  const handleSelectSavedJournal = (sj: SavedJournal) => {
+    setActiveEntry(sj.entry);
+    setActiveTab('editor');
+    showToast(`تم تحميل القيد رقم ${sj.entry.entryNo} للمراجعة`, 'success');
+  };
+
+  // Delete a historic saved entry
+  const handleDeleteSavedJournal = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedJournals(prev => prev.filter(sj => sj.id !== id));
+    showToast('تم حذف القيد من السجلات المحفوظة', 'info');
+  };
+
+  // File picker / attachments upload simulator
+  const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file: any) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            const newAttachment = {
+              id: 'att-' + generateId(),
+              name: file.name,
+              url: event.target.result as string,
+              size: (file.size / 1024).toFixed(0) + ' KB'
+            };
+            setActiveEntry(prev => ({
+              ...prev,
+              attachments: [...prev.attachments, newAttachment]
+            }));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      showToast('تم تحميل المرفق المحاسبي بنجاح', 'success');
+    }
+  };
+
+  // Remove single attachment
+  const handleRemoveAttachment = (id: string) => {
+    setActiveEntry(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(att => att.id !== id)
+    }));
+    showToast('تم إزالة المرفق', 'info');
+  };
+
+  // Simulated Excel Import (loads a balanced demo entry)
+  const handleExcelImport = () => {
+    const demoLines: JournalLine[] = [
+      {
+        id: generateId(),
+        debit: 85000,
+        credit: 0,
+        accountCode: '4102',
+        accountName: 'تكاليف النشاط - شراء أسمنت وحديد تسليح',
+        costCenter: 'مشروع كمبوند بادية - أكتوبر',
+        branch: 'فرع الجيزة',
+        notes: 'مستورد من إكسل - توريد أسمنت تشطيبات',
+        isApproved: true,
+      },
+      {
+        id: generateId(),
+        debit: 0,
+        credit: 85000,
+        accountCode: '2101',
+        accountName: 'الموردين - شركة السويس للأسمنت',
+        costCenter: 'الفرع الرئيسي - الإدارة العامة للشركة',
+        branch: 'فرع القاهرة الكبرى',
+        notes: 'مستورد من إكسل - دفعة الأسمنت المورد',
+        isApproved: true,
+      }
+    ];
+
+    setActiveEntry(prev => ({
+      ...prev,
+      entryNo: 'JV-IMP-' + Math.floor(100 + Math.random() * 900),
+      lines: demoLines,
+      status: 'balanced',
+      notes: 'قيد مستورد بالكامل من كشف إكسل الموردين الخارجي (تمت مطابقته وتوازنه تلقائياً).'
+    }));
+    showToast('تم استيراد القيد المتوازن بنجاح من ملف Excel وعرضه بالخلايا', 'success');
+  };
+
+  // Simulated Excel CSV Export download
+  const handleExcelExport = () => {
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // UTF-8 BOM
+    csvContent += "رقم الحساب,اسم الحساب,مدين,دائن,مركز التكلفة,الفرع,البيان التفصيلي\n";
+    activeEntry.lines.forEach(line => {
+      csvContent += `${line.accountCode},${line.accountName},${line.debit},${line.credit},${line.costCenter},${line.branch},${line.notes}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `قيد_يومية_${activeEntry.entryNo}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('تم تصدير قيد اليومية الحالي بتنسيق Excel بنجاح', 'success');
+  };
+
+  // Historical items filtered by search parameters
+  const filteredSavedJournals = savedJournals.filter(sj => {
+    const matchNo = filterEntryNo ? sj.entry.entryNo.includes(filterEntryNo) : true;
+    const matchAcc = filterAccount ? sj.entry.lines.some(l => l.accountName.includes(filterAccount) || l.accountCode.includes(filterAccount)) : true;
+    const matchDate = filterDate ? sj.entry.date.includes(filterDate) : true;
+    const matchCost = filterCostCenter ? sj.entry.lines.some(l => l.costCenter.includes(filterCostCenter)) : true;
+    
+    // general top search bar
+    const matchGeneral = searchQuery ? (
+      sj.entry.entryNo.includes(searchQuery) || 
+      sj.entry.notes.includes(searchQuery) ||
+      sj.entry.lines.some(l => l.accountName.includes(searchQuery))
+    ) : true;
+
+    return matchNo && matchAcc && matchDate && matchCost && matchGeneral;
+  });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none antialiased">
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 border bg-white max-w-md w-[90%]"
-            style={{
-              borderColor: toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#f43f5e' : '#3b82f6',
-            }}
-          >
-            <div className={`w-3 h-3 rounded-full ${
-              toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'
-            }`} />
-            <p className="text-sm font-semibold text-slate-800 text-right flex-1">{toast.message}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className={`min-h-screen font-sans ${darkMode ? 'bg-slate-950 text-slate-100 dark-theme' : 'bg-[#eef2f6] text-slate-800'}`}>
+      
+      {/* Toast Alert Banner */}
+      {toast && (
+        <div className="fixed top-5 left-5 z-50 flex items-center gap-2 p-3.5 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-2xl border border-slate-700 animate-bounce">
+          <span className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'}`} />
+          <span>{toast.message}</span>
+        </div>
+      )}
 
-      {/* Main Top Header - HIDDEN DURING PRINT */}
-      <header className="no-print bg-slate-900 text-white shadow-md border-b border-slate-800 shrink-0">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-inner">
-              <Printer className="w-6 h-6 animate-pulse" />
+      {/* Primary Layout Wrapper */}
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto pb-32">
+        
+        {/* --- DYNAMIC HEADER CARD --- */}
+        <div className={`rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border ${
+          darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          
+          {/* Logo & System Identity */}
+          <div className="flex items-center gap-4 text-right">
+            {/* Egyptian Flag Graphic */}
+            <div className="w-14 h-10 shrink-0 relative overflow-hidden rounded-md shadow-md border border-slate-200 flex flex-col justify-between">
+              <div className="h-1/3 bg-[#FF0000] w-full" />
+              <div className="h-1/3 bg-white w-full flex items-center justify-center relative">
+                {/* Simulated Golden Eagle */}
+                <div className="w-2.5 h-2 bg-[#C5A059] rounded-sm" />
+              </div>
+              <div className="h-1/3 bg-black w-full" />
             </div>
+
             <div>
-              <h1 className="text-lg font-bold tracking-tight">مُنشئ كشوفات الحسابات المميّزة (A4)</h1>
-              <p className="text-xs text-slate-400">صمم، احسب واطبع كشف حساب المورد بجودة احترافية</p>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <span className={darkMode ? 'text-white' : 'text-slate-900'}>نظام قيد اليومية - مصر</span>
+                <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">النسخة الفنية</span>
+              </h1>
+              <p className={`text-[11px] ${darkMode ? 'text-slate-450' : 'text-slate-500'} mt-0.5`}>
+                الإدارة المالية الذكية للأعمال والشركات المتكاملة
+              </p>
             </div>
           </div>
 
+          {/* Center Quick Mode Toggle */}
+          <div className="flex items-center gap-3">
+            {/* Dark Mode Switcher */}
+            <button 
+              type="button"
+              onClick={() => setDarkMode(!darkMode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all shadow-sm ${
+                darkMode 
+                  ? 'bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700' 
+                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              <span>{darkMode ? 'دعم الوضع النهاري' : 'دعم الوضع الليلي'}</span>
+            </button>
+          </div>
+
+          {/* Right Header Buttons */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => handleLoadTemplate(0)}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all"
-              title="إعادة الكشف لبيانات صورة المستخدم الأصلية"
+              onClick={handleResetEntry}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 text-white hover:bg-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>إعادة النموذج الأصلي (إسلام رمل)</span>
+              <Plus className="w-4 h-4 text-emerald-400" />
+              <span>إضافة قيد جديد</span>
             </button>
 
             <button
-              onClick={() => setShowGuide(!showGuide)}
-              className="text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border border-indigo-800/80 px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all"
+              onClick={() => {
+                setActiveTab('history');
+                showToast('تم فتح محرك البحث والتصفية للقيود التاريخية', 'info');
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all ${
+                activeTab === 'history'
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
             >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>دليل الطباعة</span>
+              <Search className="w-4 h-4 text-indigo-500" />
+              <span>بحث متقدم</span>
             </button>
           </div>
+
         </div>
-      </header>
 
-      {/* Guide Block - HIDDEN DURING PRINT */}
-      <AnimatePresence>
-        {showGuide && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="no-print bg-indigo-50 border-b border-indigo-100 shrink-0 overflow-hidden"
-          >
-            <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-indigo-950">
-              <div className="flex gap-3">
-                <div className="bg-indigo-100 text-indigo-700 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold">١</div>
-                <div>
-                  <h4 className="font-bold mb-1">املأ البيانات والجدول</h4>
-                  <p className="text-xs text-indigo-800 leading-relaxed">أدخل اسم المورد، ونوع الخام، وحدد الفترة الزمنية. استخدم زر الإضافة وتكرار الأسطر لإدخال بيانات الكشف بالكامل وبسرعة.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="bg-indigo-100 text-indigo-700 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold">٢</div>
-                <div>
-                  <h4 className="font-bold mb-1">اختر التنسيق واللون المميز</h4>
-                  <p className="text-xs text-indigo-800 leading-relaxed">اختر لوناً مميزاً للمؤسسة (الأزرق الملكي، الزمردي، إلخ)، وحدد عرض الأعمدة وإمكانية تفعيل تفقيط الحساب والتوقيعات بالأسفل.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="bg-indigo-100 text-indigo-700 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold">٣</div>
-                <div>
-                  <h4 className="font-bold mb-1">اطبع بشكل ممتاز A4</h4>
-                  <p className="text-xs text-indigo-800 leading-relaxed">انقر فوق زر <b>"طباعة الكشف A4"</b>. في نافذة الطباعة، تأكد من إخفاء "العناوين وتذييل الصفحة" وتفعيل خيار "رسومات الخلفية" لضمان خروج الألوان والخطوط بالشكل الممتاز المطلوب.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* --- SUB-HEADER STATUS STRIP --- */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-amber-900 font-bold shadow-sm animate-pulse">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-amber-550 rounded-full shrink-0" />
+            <span>نموذج إدخال قيد اليومية (الفعلي) - {isBalanced ? 'متوازن' : 'غير متوازن ومسودة مؤقتة'}</span>
+          </div>
+          <div className="text-[10px] text-amber-800 font-medium">
+            تنبيه: يتم تحديث ميزان المراجعة والأرصدة بالدفاتر فور الضغط على "حفظ وترحيل القيد" في قائمة العمليات.
+          </div>
+        </div>
 
-      {/* Main Workspace Layout */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 overflow-x-hidden">
-        
-        {/* LEFT PANEL: Dynamic Controls - HIDDEN DURING PRINT */}
-        <section className="no-print w-full lg:w-[45%] flex flex-col gap-5 shrink-0">
+        {/* --- MAIN DASHBOARD BODY GRID --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
-          {/* Quick templates Selector */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>اختر نموذجاً مسبقاً للبدء السريع:</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {templates.map((tpl, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleLoadTemplate(i)}
-                  className="p-2.5 rounded-lg border border-slate-200 text-right hover:border-indigo-500 hover:bg-slate-50 transition-all flex items-center gap-2 group text-xs font-semibold"
-                >
-                  <span className="text-lg group-hover:scale-110 transition-transform">{tpl.icon}</span>
-                  <div className="overflow-hidden">
-                    <p className="truncate text-slate-800">{tpl.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{tpl.header.supplierName}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Active Save State Status Bar */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between text-xs font-bold shadow-sm transition-all duration-300 ${
-            activeSavedId 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-              : 'bg-slate-50 border-slate-200 text-slate-700'
-          }`}>
-            <div className="flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${activeSavedId ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-              {activeSavedId ? (
-                <span>
-                  كشف نشط للتعديل التلقائي: <span className="font-extrabold text-emerald-950">{(savedStatements.find(s => s.id === activeSavedId)?.name || 'كشف محفوظ')}</span>
-                </span>
-              ) : (
-                <span>مسودة جديدة نشطة (تُحفظ تلقائياً في المتصفح)</span>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-[10px] text-slate-400 font-normal">تم الحفظ</span>
-            </div>
-          </div>
-
-          {/* Controls Tabs */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="flex border-b border-slate-100 bg-slate-50/80 p-1">
-              <button
-                onClick={() => setActiveTab('editor')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'editor' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>البيانات والجدول</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('design')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'design' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Layout className="w-3.5 h-3.5" />
-                <span>تنسيق وستايل الطباعة</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('manage')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'manage' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>كشوفاتك المحفوظة</span>
-              </button>
-            </div>
-
-            <div className="p-5 max-h-[620px] overflow-y-auto">
-              {/* TAB 1: Editor */}
-              {activeTab === 'editor' && (
-                <div className="space-y-5">
-                  {/* Header Form */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>بيانات رأس الكشف الأساسية</span>
-                    </h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">اسم المؤسسة (المصدرة للكشف)</label>
-                        <input
-                          type="text"
-                          value={header.companyName}
-                          onChange={e => setHeader({ ...header, companyName: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">عنوان الكشف الرئيسي</label>
-                        <input
-                          type="text"
-                          value={header.title}
-                          onChange={e => setHeader({ ...header, title: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">رقم الكشف</label>
-                        <input
-                          type="text"
-                          value={header.statementNo}
-                          onChange={e => setHeader({ ...header, statementNo: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">اسم المورد</label>
-                        <input
-                          type="text"
-                          value={header.supplierName}
-                          onChange={e => setHeader({ ...header, supplierName: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">نوع الخام الرئيسي</label>
-                        <input
-                          type="text"
-                          value={header.rawMaterialType}
-                          onChange={e => setHeader({ ...header, rawMaterialType: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">الفترة من</label>
-                        <input
-                          type="date"
-                          value={header.dateFrom}
-                          onChange={e => setHeader({ ...header, dateFrom: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">الفترة إلى</label>
-                        <input
-                          type="date"
-                          value={header.dateTo}
-                          onChange={e => setHeader({ ...header, dateTo: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Table Rows Section */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5" />
-                        <span>بنود جدول الكشف ({rows.length})</span>
-                      </h4>
-                      <button
-                        onClick={handleAddRow}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>إضافة سطر</span>
-                      </button>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 mb-3">يمكنك تعديل القيم مباشرة من الحقول التالية. الإجماليات تُحسب تلقائياً بضرب الكمية بسعر الخام.</p>
-
-                    <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1">
-                      {rows.map((row, index) => (
-                        <div 
-                          key={row.id} 
-                          className="p-3 border border-slate-200 rounded-xl bg-slate-50/50 hover:bg-slate-50 relative flex flex-col gap-2 group transition-all"
-                        >
-                          {/* Row Indicator & Actions */}
-                          <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                            <span className="text-[11px] font-bold text-slate-400">سطر رقم {index + 1}</span>
-                            <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleDuplicateRow(row.id)}
-                                className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all"
-                                title="تكرار السطر"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRow(row.id)}
-                                className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
-                                title="حذف السطر"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Data Fields */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-0.5">التاريخ</label>
-                              <input
-                                type="date"
-                                value={row.date}
-                                onChange={e => handleUpdateRow(row.id, 'date', e.target.value)}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-0.5">نوع الخام</label>
-                              <input
-                                type="text"
-                                value={row.rawMaterial}
-                                onChange={e => handleUpdateRow(row.id, 'rawMaterial', e.target.value)}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white"
-                                placeholder="رمل، أسمنت، إلخ"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-0.5">الكمية</label>
-                              <input
-                                type="number"
-                                value={row.quantity || ''}
-                                onChange={e => handleUpdateRow(row.id, 'quantity', Number(e.target.value))}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white font-mono"
-                                placeholder="60.00"
-                                step="any"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-0.5">السعر</label>
-                              <input
-                                type="number"
-                                value={row.price || ''}
-                                onChange={e => handleUpdateRow(row.id, 'price', Number(e.target.value))}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white font-mono"
-                                placeholder="195.00"
-                                step="any"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-[10px] text-slate-400 mb-0.5">مركز التكلفة</label>
-                              <input
-                                type="text"
-                                value={row.costCenter}
-                                onChange={e => handleUpdateRow(row.id, 'costCenter', e.target.value)}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white"
-                                placeholder="مثل: مشروع ذا كورد"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-[10px] text-slate-400 mb-0.5">ملاحظات البند</label>
-                              <input
-                                type="text"
-                                value={row.notes}
-                                onChange={e => handleUpdateRow(row.id, 'notes', e.target.value)}
-                                className="w-full text-xs p-1 border border-slate-200 rounded-md bg-white"
-                                placeholder="ملاحظات اختيارية"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Computed Total Badge */}
-                          <div className="text-[10px] text-right font-mono font-bold text-slate-500 mt-1">
-                            الإجمالي الفرعي: <span className="text-emerald-600">{formatCurrency((row.quantity || 0) * (row.price || 0))}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: Design and Layout customization */}
-              {activeTab === 'design' && (
-                <div className="space-y-5">
-                  {/* Theme Select */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">اللون المميّز للمؤسسة</h4>
-                    <p className="text-[10px] text-slate-400 mb-3">اختر هوية لونية أنيقة تناسب نشاطك لتلوين الترويسة والخطوط.</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'classic-gray' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'classic-gray' ? 'border-gray-500 bg-gray-50 text-gray-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>الرمادي الكلاسيكي (مثل الصورة)</span>
-                        <span className="w-4 h-4 rounded-full bg-gray-300 border border-gray-400 shrink-0" />
-                      </button>
-                      
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'royal-blue' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'royal-blue' ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>الأزرق الملكي الفاخر</span>
-                        <span className="w-4 h-4 rounded-full bg-blue-800 border border-blue-950 shrink-0" />
-                      </button>
-
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'emerald-green' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'emerald-green' ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>الأخضر الزمردي</span>
-                        <span className="w-4 h-4 rounded-full bg-emerald-700 border border-emerald-900 shrink-0" />
-                      </button>
-
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'amber-gold' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'amber-gold' ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>الذهبي العنبري الدافئ</span>
-                        <span className="w-4 h-4 rounded-full bg-amber-600 border border-amber-800 shrink-0" />
-                      </button>
-
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'high-density' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'high-density' ? 'border-slate-900 bg-slate-100 text-slate-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>تنسيق عالي الكثافة (High Density)</span>
-                        <span className="w-4 h-4 rounded bg-slate-950 border border-slate-950 shrink-0" />
-                      </button>
-
-                      <button
-                        onClick={() => setConfig({ ...config, themeColor: 'minimal-dark' })}
-                        className={`p-2.5 rounded-lg border text-xs text-right flex items-center justify-between ${
-                          config.themeColor === 'minimal-dark' ? 'border-slate-800 bg-slate-50 text-slate-900 font-bold' : 'border-slate-200'
-                        }`}
-                      >
-                        <span>الأسود والأبيض البسيط</span>
-                        <span className="w-4 h-4 rounded-full bg-slate-950 border border-slate-900 shrink-0" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Table Styling Option */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">طريقة رسم الجدول</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => setConfig({ ...config, tableStyle: 'grid' })}
-                        className={`p-2 text-xs rounded-lg border ${config.tableStyle === 'grid' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        شبكة كاملة (Grid)
-                      </button>
-                      <button
-                        onClick={() => setConfig({ ...config, tableStyle: 'clean' })}
-                        className={`p-2 text-xs rounded-lg border ${config.tableStyle === 'clean' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        خطوط أفقية فقط
-                      </button>
-                      <button
-                        onClick={() => setConfig({ ...config, tableStyle: 'striped' })}
-                        className={`p-2 text-xs rounded-lg border ${config.tableStyle === 'striped' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        أسطر ملونة (Stripes)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Fonts Sizes Option */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">حجم خط الطباعة</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => setConfig({ ...config, fontSize: 'sm' })}
-                        className={`p-2 text-xs rounded-lg border ${config.fontSize === 'sm' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        صغير (مثالي للمقالات الطويلة)
-                      </button>
-                      <button
-                        onClick={() => setConfig({ ...config, fontSize: 'base' })}
-                        className={`p-2 text-xs rounded-lg border ${config.fontSize === 'base' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        افتراضي (A4 متوازن)
-                      </button>
-                      <button
-                        onClick={() => setConfig({ ...config, fontSize: 'lg' })}
-                        className={`p-2 text-xs rounded-lg border ${config.fontSize === 'lg' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold' : 'bg-white border-slate-200'}`}
-                      >
-                        كبير وبارز
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Columns Visibility */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">التحكم في أعمدة الجدول المعروضة</h4>
-                    <p className="text-[10px] text-slate-400 mb-2">حدد الأعمدة التي ترغب بظهورها في الكشف المطبوع.</p>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      {Object.keys(config.visibleColumns).map((colKey) => {
-                        const arabicName: Record<string, string> = {
-                          date: 'التاريخ',
-                          rawMaterial: 'نوع الخام',
-                          quantity: 'الكمية',
-                          price: 'السعر',
-                          total: 'الإجمالي',
-                          costCenter: 'مركز التكلفة',
-                          notes: 'ملاحظات',
-                        };
-                        return (
-                          <label key={colKey} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={(config.visibleColumns as any)[colKey]}
-                              onChange={(e) => setConfig({
-                                ...config,
-                                visibleColumns: {
-                                  ...config.visibleColumns,
-                                  [colKey]: e.target.checked,
-                                }
-                              })}
-                              className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                            />
-                            <span>{arabicName[colKey]}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Signatures & Footer Note */}
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2">تذييل الصفحة والتوقيعات</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="hasSignatures"
-                          checked={header.hasSignatures}
-                          onChange={e => setHeader({ ...header, hasSignatures: e.target.checked })}
-                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                        />
-                        <label htmlFor="hasSignatures" className="text-xs font-bold text-slate-700 cursor-pointer">عرض خانات التوقيعات أسفل الكشف</label>
-                      </div>
-
-                      {header.hasSignatures && (
-                        <div>
-                          <label className="block text-[10px] text-slate-400 mb-1">عناوين التوقيعات (مفصولة بفاصلة)</label>
-                          <input
-                            type="text"
-                            value={header.signatures.join('، ')}
-                            onChange={e => setHeader({ 
-                              ...header, 
-                              signatures: e.target.value.split(/[،,]/).map(s => s.trim()).filter(Boolean)
-                            })}
-                            className="w-full text-xs p-2 border border-slate-200 rounded-lg"
-                            placeholder="توقيع المستلم، الحسابات، الإدارة"
-                          />
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">ملاحظة أسفل الكشف (شروط / تنبيهات)</label>
-                        <textarea
-                          value={header.additionalNotes}
-                          onChange={e => setHeader({ ...header, additionalNotes: e.target.value })}
-                          rows={2}
-                          className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none"
-                          placeholder="ملاحظات تظهر قبل التوقيعات مباشرة..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: Saved & Manage */}
-              {activeTab === 'manage' && (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg flex items-start gap-2.5">
-                    <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-indigo-950 leading-relaxed">
-                      يتم حفظ كشوفاتك في ذاكرة المتصفح المحلية لتتمكن من الرجوع إليها والتعديل عليها لاحقاً أو طباعتها من جديد.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowSaveModal(true)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all flex-1 justify-center"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>حفظ الكشف الحالي في القائمة</span>
-                    </button>
-                  </div>
-
-                  <hr className="border-slate-100" />
-
-                  <h4 className="text-xs font-bold text-slate-600 mb-2">قائمة الكشوفات المحفوظة ({savedStatements.length})</h4>
-                  
-                  {savedStatements.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-xs bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                      لا يوجد أي كشوفات محفوظة حالياً. انقر على الزر بالأعلى لحفظ كشفك الأول.
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {savedStatements.map((saved) => (
-                        <div
-                          key={saved.id}
-                          onClick={() => handleLoadSaved(saved)}
-                          className="p-3 border border-slate-200 rounded-lg bg-white hover:border-indigo-500 cursor-pointer transition-all flex items-center justify-between group"
-                        >
-                          <div className="text-right overflow-hidden">
-                            <h5 className="text-xs font-bold text-slate-800 truncate">{saved.name}</h5>
-                            <p className="text-[10px] text-slate-400 mt-0.5">آخر تعديل: {saved.updatedAt}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5 truncate">{saved.header.supplierName} • {saved.rows.length} بنود</p>
-                          </div>
-                          <button
-                            onClick={(e) => handleDeleteSaved(saved.id, e)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                            title="حذف من المحفوظات"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <hr className="border-slate-100" />
-
-                  {/* Export / Import File Buttons */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-slate-600">نسخ احتياطي خارجي</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={handleExportJSON}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 border border-slate-200 transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>تصدير كملف JSON</span>
-                      </button>
-
-                      <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 border border-slate-200 transition-all cursor-pointer text-center">
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>استيراد ملف JSON</span>
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleImportJSON}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Actions Footer inside card */}
-            <div className="border-t border-slate-100 p-4 bg-slate-50/50 flex gap-2 justify-between">
-              <button
-                onClick={handlePrint}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-emerald-600/10 transition-all"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة الكشف (A4)</span>
-              </button>
-
-              <button
-                onClick={handleReset}
-                className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs font-bold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition-all"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>بدء كشف فارغ</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* RIGHT PANEL: Live Printable A4 Page Preview */}
-        <section className="w-full lg:flex-1 flex flex-col items-center overflow-x-auto min-h-[500px]">
-          {/* Quick info above live preview */}
-          <div className="no-print w-full max-w-[210mm] mb-3 flex items-center justify-between text-xs text-slate-500 px-1">
-            <span className="flex items-center gap-1.5 font-semibold text-indigo-600">
-              <Eye className="w-4 h-4" />
-              <span>معاينة ورقة A4 التفاعلية (سيتم طباعتها هكذا تماماً)</span>
-            </span>
-            <span className="text-[10px] text-slate-400">التحديث تلقائي ولحظي</span>
-          </div>
-
-          {/* THE PHYSICAL A4 PAPER REPRESENTATION */}
-          <div 
-            id="a4-print-area"
-            className={`print-page bg-white w-full max-w-[210mm] min-h-[297mm] p-8 md:p-12 shadow-2xl flex flex-col justify-between text-slate-950 select-text relative transition-all ${
-              config.themeColor === 'high-density' ? 'border-[12px] border-slate-900 ring-4 ring-offset-4 ring-slate-950/10' : 'border border-slate-200 rounded-lg'
-            }`}
-            style={{
-              fontSize: config.fontSize === 'sm' ? '0.85rem' : config.fontSize === 'lg' ? '1.1rem' : '0.95rem',
-              boxSizing: 'border-box',
-            }}
-          >
-            {/* Top accent border bar */}
-            <div className={`absolute top-0 left-0 right-0 h-2 rounded-t-lg no-print ${
-              config.themeColor === 'classic-gray' ? 'bg-gray-300' :
-              config.themeColor === 'royal-blue' ? 'bg-blue-800' :
-              config.themeColor === 'emerald-green' ? 'bg-emerald-700' :
-              config.themeColor === 'amber-gold' ? 'bg-amber-600' : 'bg-slate-950'
-            }`} />
-
-            {/* Watermark/Background stamp (High Density Theme) */}
-            {config.themeColor === 'high-density' && (
-              <div className="absolute inset-0 opacity-[0.035] pointer-events-none flex items-center justify-center overflow-hidden">
-                <div className="text-[100px] font-black border-[12px] border-slate-950 p-8 rotate-12 tracking-widest select-none uppercase text-center leading-tight">
-                  {header.rawMaterialType ? header.rawMaterialType : 'SUPPLIER'}
-                </div>
-              </div>
-            )}
-
-            {/* Inner Content Wrapper */}
-            <div className="w-full flex-1 flex flex-col">
+          {/* LEFT/CENTER WORKSPACE (FORM & INPUTS) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Form Table Box */}
+            <div className={`rounded-2xl border shadow-sm overflow-hidden ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
               
-              {/* Header Box (Logo / Company details) */}
-              {config.showCompanyHeader && (
-                config.themeColor === 'high-density' ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-between border-b-4 border-slate-900 pb-5 mb-6 gap-4">
-                    <div className="text-right">
-                      <h2 className="text-3xl font-black text-slate-900 leading-none">{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
-                      <p className="text-xs text-slate-500 mt-2">الإدارة المالية</p>
-                    </div>
-                    
-                    {/* Visual Premium Stamp-like logo placeholder (Geometric cross/star frame) */}
-                    <div className="w-16 h-16 bg-slate-900 flex items-center justify-center rounded-sm shrink-0 shadow-md">
-                      <div className="border-2 border-white w-12 h-12 flex items-center justify-center">
-                        <div className="text-white text-base font-black tracking-tighter">{header.logoText ? header.logoText.slice(0, 3) : 'H-D'}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-200 pb-5 mb-6 gap-4">
-                    <div className="text-right">
-                      <h2 className={`text-lg font-extrabold tracking-tight ${theme.textAccent}`}>{header.companyName || 'شركة سامكون للإستثمار العقارى والتعمير'}</h2>
-                      <p className="text-[11px] text-slate-500 mt-1">الإدارة المالية</p>
-                    </div>
-                    
-                    {/* Visual Premium Stamp-like logo placeholder */}
-                    <div className={`px-4 py-2.5 rounded-lg border-2 ${theme.border} flex flex-col items-center justify-center bg-slate-50/60 min-w-[120px]`}>
-                      <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">شعار الشركة</span>
-                      <span className={`text-xs font-black mt-0.5 ${theme.textAccent}`}>{header.logoText || 'الإدارة المالية'}</span>
-                    </div>
-                  </div>
-                )
-              )}
+              {/* Box Header Controls */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${isBalanced ? 'bg-emerald-500' : 'bg-rose-500 animate-ping'}`} />
+                  <span className="text-xs font-bold text-slate-700">قيد يومي رقم: {activeEntry.entryNo}</span>
+                </div>
 
-              {/* Document Main Heading Title (Centered & Distinguished) */}
-              <div className={`w-full py-3 px-6 rounded-xl border-2 text-center shadow-sm mb-6 ${
-                config.themeColor === 'high-density' ? 'border-4 border-slate-900 bg-slate-100 text-slate-900' : theme.headerBg
-              }`}>
-                <h2 className="text-lg md:text-xl font-extrabold tracking-wide">
-                  {header.title} {header.supplierName ? `/ ${header.supplierName}` : ''} {header.rawMaterialType ? `( ${header.rawMaterialType} )` : ''}
-                </h2>
+                <div className="flex items-center gap-3">
+                  {/* Currency Picker */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 font-bold">العملة:</span>
+                    <select
+                      value={activeEntry.currency}
+                      onChange={(e) => setActiveEntry({ ...activeEntry, currency: e.target.value })}
+                      className="text-xs p-1 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      {currencies.map(c => (
+                        <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Date Input */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 font-bold">التاريخ:</span>
+                    <input
+                      type="date"
+                      value={activeEntry.date}
+                      onChange={(e) => setActiveEntry({ ...activeEntry, date: e.target.value })}
+                      className="text-xs p-1 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Statement details bar (Dates, numbers) */}
-              {config.themeColor === 'high-density' ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3.5 gap-x-6 pb-6 mb-6 text-xs text-slate-900 border-b-2 border-slate-900">
-                  <div className="flex gap-2 items-end">
-                    <span className="font-bold text-slate-800 shrink-0">اسم المورد:</span>
-                    <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-black text-slate-900 text-right">{header.supplierName || '—'}</div>
-                  </div>
-                  <div className="flex gap-2 items-end">
-                    <span className="font-bold text-slate-800 shrink-0">نوع الخام:</span>
-                    <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-bold text-slate-900 text-right">{header.rawMaterialType || '—'}</div>
-                  </div>
-                  {config.showStatementNo && (
-                    <div className="flex gap-2 items-end">
-                      <span className="font-bold text-slate-800 shrink-0">رقم الكشف:</span>
-                      <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-mono font-bold text-slate-900 text-right">{header.statementNo || '—'}</div>
-                    </div>
-                  )}
-                  {config.showDateRange && (
-                    <div className="flex gap-2 items-end">
-                      <span className="font-bold text-slate-800 shrink-0">الفترة الزمنية:</span>
-                      <div className="border-b border-dotted border-slate-400 w-full pb-0.5 font-bold text-slate-900 text-right">
-                        {header.dateFrom ? `من ${header.dateFrom}` : ''} {header.dateTo ? `إلى ${header.dateTo}` : ''}
-                        {!header.dateFrom && !header.dateTo ? 'كامل المدة' : ''}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-100 mb-6 text-xs text-slate-800">
-                  <div>
-                    <span className="text-slate-400 block font-bold mb-0.5">اسم المورد:</span>
-                    <span className="font-extrabold text-slate-900">{header.supplierName || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-bold mb-0.5">نوع الخام:</span>
-                    <span className="font-extrabold text-slate-900">{header.rawMaterialType || '—'}</span>
-                  </div>
-                  {config.showStatementNo && (
-                    <div>
-                      <span className="text-slate-400 block font-bold mb-0.5">رقم الكشف:</span>
-                      <span className="font-mono font-bold text-slate-900">{header.statementNo || '—'}</span>
-                    </div>
-                  )}
-                  {config.showDateRange && (
-                    <div>
-                      <span className="text-slate-400 block font-bold mb-0.5">فترة الكشف:</span>
-                      <span className="font-bold text-slate-900">
-                        {header.dateFrom ? `من ${header.dateFrom}` : ''} {header.dateTo ? `إلى ${header.dateTo}` : ''}
-                        {!header.dateFrom && !header.dateTo ? 'كامل المدة' : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TABLE AREA */}
-              <div className="w-full overflow-x-auto mb-6">
-                <table className={`w-full text-right border-collapse ${
-                  config.tableStyle === 'grid' ? 'border border-slate-300' : 'border-b border-slate-200'
-                }`}>
-                  <thead>
-                    <tr className={`border-b border-slate-300 text-xs font-bold ${theme.tableHeader}`}>
-                      {config.visibleColumns.date && <th className="p-2.5 border border-slate-300">التاريخ</th>}
-                      {config.visibleColumns.rawMaterial && <th className="p-2.5 border border-slate-300">نوع الخام</th>}
-                      {config.visibleColumns.quantity && <th className="p-2.5 border border-slate-300 text-left">الكمية</th>}
-                      {config.visibleColumns.price && <th className="p-2.5 border border-slate-300 text-left">السعر</th>}
-                      {config.visibleColumns.total && <th className="p-2.5 border border-slate-300 text-left">الإجمالي</th>}
-                      {config.visibleColumns.costCenter && <th className="p-2.5 border border-slate-300">مركز التكلفة</th>}
-                      {config.visibleColumns.notes && <th className="p-2.5 border border-slate-300">ملاحظات</th>}
+              {/* TABLE FORM AREA */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className={`border-b ${darkMode ? 'bg-slate-850 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                    <tr>
+                      <th className="p-3 text-center w-12">الصف</th>
+                      <th className="p-3 w-40">رقم / كود الحساب</th>
+                      <th className="p-3 w-44 text-center">مدين (DR)</th>
+                      <th className="p-3 w-44 text-center">دائن (CR)</th>
+                      <th className="p-3">مركز التكلفة</th>
+                      <th className="p-3">البيان / الوصف للسطر</th>
+                      <th className="p-3 text-center w-40">خيارات السطر</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {rows.map((row, index) => {
-                      const rowTotal = (row.quantity || 0) * (row.price || 0);
-                      return (
-                        <tr 
-                          key={row.id} 
-                          className={`text-xs border-b border-slate-200 transition-colors ${
-                            config.tableStyle === 'striped' && index % 2 === 1 ? 'bg-slate-50/80' : ''
-                          }`}
-                        >
-                          {config.visibleColumns.date && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-600 font-mono whitespace-nowrap`}>
-                              {row.date || '—'}
-                            </td>
-                          )}
-                          {config.visibleColumns.rawMaterial && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-800`}>
-                              {row.rawMaterial || '—'}
-                            </td>
-                          )}
-                          {config.visibleColumns.quantity && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
-                              {(row.quantity || 0).toFixed(2)}
-                            </td>
-                          )}
-                          {config.visibleColumns.price && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-slate-800`}>
-                              {formatCurrency(row.price || 0)}
-                            </td>
-                          )}
-                          {config.visibleColumns.total && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono font-bold text-slate-900`}>
-                              {formatCurrency(rowTotal)}
-                            </td>
-                          )}
-                          {config.visibleColumns.costCenter && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} font-medium text-slate-800`}>
-                              {row.costCenter || '—'}
-                            </td>
-                          )}
-                          {config.visibleColumns.notes && (
-                            <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-slate-500`}>
-                              {row.notes || '—'}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
+                  <tbody className="divide-y divide-slate-100">
+                    {activeEntry.lines.map((line, idx) => (
+                      <tr key={line.id || idx} className="hover:bg-slate-50/40">
+                        
+                        {/* 1. Row index number */}
+                        <td className="p-3 text-center font-bold font-mono text-slate-400 bg-slate-50/20">{idx + 1}</td>
+                        
+                        {/* 2. Account selection code dropdown */}
+                        <td className="p-3">
+                          <select
+                            value={line.accountCode}
+                            onChange={(e) => handleUpdateLine(line.id, 'accountCode', e.target.value)}
+                            className="w-full p-1.5 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500/20 font-sans"
+                          >
+                            {chartOfAccounts.map(acc => (
+                              <option key={acc.code} value={acc.code}>{acc.code} - {acc.name.substring(0, 30)}</option>
+                            ))}
+                          </select>
+                        </td>
 
-                    {/* General empty rows just to visually balance like the original image if user has very few rows */}
-                    {rows.length < 10 && Array.from({ length: Math.max(0, 5 - rows.length) }).map((_, emptyIdx) => (
-                      <tr key={`empty-${emptyIdx}`} className="h-8 border-b border-slate-200/50">
-                        {config.visibleColumns.date && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.rawMaterial && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.quantity && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.price && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.total && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.costCenter && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
-                        {config.visibleColumns.notes && <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''}`} />}
+                        {/* 3. Debit input (مدين) */}
+                        <td className="p-3">
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0.00"
+                              value={line.debit || ''}
+                              onChange={(e) => handleUpdateLine(line.id, 'debit', parseFloat(e.target.value) || 0)}
+                              className="w-full p-1.5 pr-8 border border-slate-200 rounded-lg text-left font-mono font-bold text-blue-700 bg-blue-50/10 focus:ring-2 focus:ring-blue-500/20"
+                            />
+                            <span className="absolute right-2 top-2 text-[10px] font-bold text-blue-500">ج.م</span>
+                          </div>
+                        </td>
+
+                        {/* 4. Credit input (دائن) */}
+                        <td className="p-3">
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0.00"
+                              value={line.credit || ''}
+                              onChange={(e) => handleUpdateLine(line.id, 'credit', parseFloat(e.target.value) || 0)}
+                              className="w-full p-1.5 pr-8 border border-slate-200 rounded-lg text-left font-mono font-bold text-red-600 bg-red-50/10 focus:ring-2 focus:ring-red-500/20"
+                            />
+                            <span className="absolute right-2 top-2 text-[10px] font-bold text-red-500">ج.م</span>
+                          </div>
+                        </td>
+
+                        {/* 5. Cost Center dropdown */}
+                        <td className="p-3">
+                          <select
+                            value={line.costCenter}
+                            onChange={(e) => handleUpdateLine(line.id, 'costCenter', e.target.value)}
+                            className="w-full p-1.5 border border-slate-200 rounded-lg text-xs"
+                          >
+                            {costCenters.map(cc => (
+                              <option key={cc} value={cc}>{cc}</option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* 6. Notes text */}
+                        <td className="p-3">
+                          <input
+                            type="text"
+                            placeholder="اكتب شرح البند الفرعي المحاسبي..."
+                            value={line.notes}
+                            onChange={(e) => handleUpdateLine(line.id, 'notes', e.target.value)}
+                            className="w-full p-1.5 border border-slate-200 rounded-lg text-xs"
+                          />
+                        </td>
+
+                        {/* 7. Action controllers on single line (Approved, Delete, Duplicate) */}
+                        <td className="p-3">
+                          <div className="flex items-center gap-1 justify-center">
+                            
+                            {/* Approve check badge */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleApproveLine(line.id)}
+                              title="اعتماد السطر المحاسبي فرعياً"
+                              className={`p-1 rounded transition-all ${
+                                line.isApproved 
+                                  ? 'bg-emerald-100 text-emerald-800' 
+                                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Duplicate */}
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateRow(line.id)}
+                              title="تكرار السطر"
+                              className="p-1 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded transition-all"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRow(line.id)}
+                              title="حذف السطر"
+                              className="p-1 bg-rose-50 text-rose-650 hover:bg-rose-100 rounded transition-all"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+
+                          </div>
+                        </td>
+
                       </tr>
                     ))}
-
-                    {/* Total Sum Row */}
-                    <tr className="font-extrabold bg-slate-100 border-t-2 border-slate-300">
-                      {/* Raw Material and Date span containing "إجمالي عام" label */}
-                      <td 
-                        colSpan={(config.visibleColumns.rawMaterial ? 1 : 0) + (config.visibleColumns.date ? 1 : 0)} 
-                        className={`p-3 text-center text-xs text-slate-900 font-black ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}
-                      >
-                        اجمالي عام
-                      </td>
-
-                      {/* Total Quantity */}
-                      {config.visibleColumns.quantity && (
-                        <td className={`p-3 text-left font-mono text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
-                          {config.showTotalQuantity ? totalQuantity.toFixed(2) : '—'}
-                        </td>
-                      )}
-
-                      {/* Price header placeholder */}
-                      {config.visibleColumns.price && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
-
-                      {/* Grand Total Value */}
-                      {config.visibleColumns.total && (
-                        <td className={`p-3 text-left font-mono text-sm text-slate-900 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`}>
-                          {config.showGrandTotal ? formatCurrency(grandTotal) : '—'}
-                        </td>
-                      )}
-
-                      {/* Cost Center / Notes columns span */}
-                      {config.visibleColumns.costCenter && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
-                      {config.visibleColumns.notes && <td className={`p-3 ${config.tableStyle === 'grid' ? 'border border-slate-300' : ''}`} />}
-                    </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Dynamic tafqeet line */}
-              {config.showGrandTotal && (
-                <div className="mb-6 p-3 rounded-lg border border-slate-200 bg-slate-50/50 text-xs text-right">
-                  <span className="font-extrabold text-slate-500">تفقيط المبلغ الإجمالي:</span>
-                  <span className={`mr-2 font-bold ${theme.textAccent}`}>{tafqeet(grandTotal)}</span>
-                </div>
-              )}
-
-              {/* Additional custom notes */}
-              {header.additionalNotes && (
-                <div className="mb-6 text-[11px] text-slate-500 leading-relaxed text-right border-r-2 border-slate-200 pr-3">
-                  <p>{header.additionalNotes}</p>
-                </div>
-              )}
+              {/* Add Row controller */}
+              <div className="p-4 border-t border-slate-150 bg-slate-50/20">
+                <button
+                  type="button"
+                  onClick={handleAddRow}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>إضافة بند فرعي (سطر حساب جديد)</span>
+                </button>
+              </div>
 
             </div>
 
-            {/* Bottom Signature Boxes */}
-            {header.hasSignatures && header.signatures.length > 0 && (
-              <div className="border-t border-slate-100 pt-8 mt-4">
-                <div className="flex flex-row justify-between items-center gap-6">
-                  {header.signatures.map((sig, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center">
-                      <span className="text-xs font-bold text-slate-600 mb-2">{sig}</span>
-                      {config.themeColor === 'high-density' ? (
-                        <div className="w-36 h-14 bg-slate-50/50 border-2 border-slate-900 rounded-sm relative flex items-center justify-center select-none shadow-sm">
-                          <span className="text-sm font-mono text-slate-300/80 italic tracking-wider font-extrabold rotate-3">APPROVED</span>
-                          <span className="absolute -top-2.5 right-3 text-[9px] text-slate-950 font-black bg-white px-1.5 py-0.5 border border-slate-900 rounded-sm">اعتماد الختم</span>
-                        </div>
-                      ) : (
-                        <div className="w-full border-b border-dashed border-slate-300 mt-4" />
-                      )}
-                    </div>
-                  ))}
+            {/* ATTACHMENTS & GENERAL REMARKS BLOCK */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* 1. Multiple Attachments Upload Box */}
+              <div className={`p-5 rounded-2xl border shadow-sm flex flex-col justify-between ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-indigo-500" />
+                    <span>رفع المرفقات الإلكترونية للقيد (الفواتير والمستندات)</span>
+                  </h4>
+                  
+                  {/* Drag drop area */}
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50/50 transition-all relative">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf"
+                      onChange={handleAttachmentUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Upload className="w-7 h-7 text-indigo-500 mx-auto mb-2" />
+                    <span className="block text-xs font-bold text-slate-700 mb-1">اسحب وأفلت المرفقات هنا أو تصفح الملفات</span>
+                    <span className="block text-[10px] text-slate-400">يدعم صيغ الصور وPDF والملفات الضريبية</span>
+                  </div>
                 </div>
+
+                {/* Thumbnails preview list */}
+                {activeEntry.attachments.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <span className="block text-[10px] text-slate-400 font-bold mb-2">المرفقات المدرجة ({activeEntry.attachments.length}):</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {activeEntry.attachments.map(att => (
+                        <div key={att.id} className="p-2 border border-slate-150 rounded-xl bg-slate-50 flex items-center justify-between gap-2 text-[10px]">
+                          <div className="flex items-center gap-2 truncate">
+                            {/* Mini image thumbnail */}
+                            <img src={att.url} className="w-8 h-8 rounded object-cover shrink-0 border border-slate-200" referrerPolicy="no-referrer" />
+                            <div className="truncate text-right">
+                              <span className="block font-bold text-slate-700 truncate" title={att.name}>{att.name}</span>
+                              <span className="block text-slate-450 font-mono">{att.size}</span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleRemoveAttachment(att.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. General Notes Text Area */}
+              <div className={`p-5 rounded-2xl border shadow-sm ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-indigo-500" />
+                  <span>إضافة ملاحظات القيد والبيان العام للتسوية</span>
+                </h4>
+                
+                <textarea
+                  placeholder="اكتب شرحاً وافياً ومختصراً يوضح طبيعة هذا القيد المحاسبي لأرشفته ومراجعته من قبل المدير المالي والمراجعين..."
+                  rows={4}
+                  value={activeEntry.notes}
+                  onChange={(e) => setActiveEntry({ ...activeEntry, notes: e.target.value })}
+                  className="w-full p-3 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+
+                <p className="text-[10px] text-slate-400 mt-2 italic leading-relaxed">
+                  * نصيحة: يفضل كتابة رقم المستخلص أو رقم الفاتورة أو الجهة المستلمة بوضوح في الملاحظات لسهولة استدعائها بالبحث.
+                </p>
+              </div>
+
+            </div>
+
+            {/* TAB EDITOR VS HISTORICAL HISTORY VIEWER */}
+            {activeTab === 'history' && (
+              <div className={`p-5 rounded-2xl border shadow-sm ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                  <span className="font-bold text-xs text-slate-700">محرك البحث واستعراض القيود السابقة في السجلات</span>
+                  <button 
+                    onClick={() => {
+                      setFilterEntryNo('');
+                      setFilterAccount('');
+                      setFilterDate('');
+                      setFilterCostCenter('');
+                    }}
+                    className="text-[10px] text-indigo-600 font-bold hover:underline"
+                  >
+                    تفريغ فلاتر البحث
+                  </button>
+                </div>
+
+                {/* Sub Filters Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1">رقم القيد:</label>
+                    <input
+                      type="text"
+                      placeholder="JV-2026/0010"
+                      value={filterEntryNo}
+                      onChange={(e) => setFilterEntryNo(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1">اسم/كود الحساب:</label>
+                    <input
+                      type="text"
+                      placeholder="البنك الأهلي..."
+                      value={filterAccount}
+                      onChange={(e) => setFilterAccount(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1">تاريخ القيد:</label>
+                    <input
+                      type="date"
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1">مركز التكلفة:</label>
+                    <select
+                      value={filterCostCenter}
+                      onChange={(e) => setFilterCostCenter(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg text-xs"
+                    >
+                      <option value="">كل مراكز التكلفة</option>
+                      {costCenters.map(cc => <option key={cc} value={cc}>{cc}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid of filtered items */}
+                <div className="space-y-2">
+                  {filteredSavedJournals.length > 0 ? (
+                    filteredSavedJournals.map(sj => (
+                      <div
+                        key={sj.id}
+                        onClick={() => handleSelectSavedJournal(sj)}
+                        className="p-3 border border-slate-150 rounded-xl hover:bg-slate-50 transition-all cursor-pointer flex justify-between items-center text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-indigo-700 font-mono text-sm">{sj.entry.entryNo}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">({sj.entry.date})</span>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
+                              {sj.entry.status === 'approved' ? 'معتمد ومرحل' : 'متوازن'}
+                            </span>
+                          </div>
+                          <p className="text-slate-500 font-medium truncate max-w-lg">{sj.entry.notes || 'لا توجد ملاحظات عامة للقيد'}</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-left font-mono">
+                            <span className="block font-bold text-slate-700">
+                              {formatCurrency(sj.entry.lines.reduce((sum, l) => sum + l.debit, 0))}
+                            </span>
+                            <span className="block text-[10px] text-slate-400">إجمالي مدين/دائن</span>
+                          </div>
+
+                          <button
+                            onClick={(e) => handleDeleteSavedJournal(sj.id, e)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded bg-slate-50 hover:bg-slate-100"
+                            title="حذف القيد"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-slate-400 font-medium">
+                      لا توجد قيود يومية سابقة تطابق خيارات فلاتر البحث الحالية.
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 
-            {/* Watermark/Footer Date Stamp */}
-            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-3 mt-4">
-              <span>تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')}</span>
-              <span>مُنشئ كشوفات الحسابات المميّزة | ورق قياسي A4</span>
-              <span>صفحة ١ من ١</span>
-            </div>
           </div>
-        </section>
 
-      </main>
-
-      {/* Save to Local List Modal (HIDDEN DURING PRINT) */}
-      <AnimatePresence>
-        {showSaveModal && (
-          <div className="no-print fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl border border-slate-200 shadow-2xl p-6 max-w-md w-full text-right"
-            >
-              <h3 className="text-sm font-bold text-slate-800 mb-2">حفظ كشف الحساب في المتصفح</h3>
-              <p className="text-xs text-slate-400 mb-4">أدخل اسماً مميزاً للكشف حتى يمكنك تمييزه في قائمتك لاحقاً (مثال: كشف رمل إسلام - يونيو ٢٠٢٦).</p>
-              
-              <input
-                type="text"
-                placeholder="اسم الكشف للتخزين"
-                value={currentSaveName}
-                onChange={e => setCurrentSaveName(e.target.value)}
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                autoFocus
-              />
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setShowSaveModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-all"
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={handleSaveToLocalStorage}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-indigo-600/10"
-                >
-                  حفظ وتخزين
-                </button>
+          {/* RIGHT SIDEBAR (SUMMARY, PROGRESS MEETERS, ACTION CONTROLS) */}
+          <div className="space-y-6">
+            
+            {/* 1. Date widget, user credentials, pulse indicator */}
+            <div className={`p-4 rounded-2xl border shadow-sm ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock className="w-4 h-4 text-indigo-500" />
+                  <span>الوقت المالي الحالي</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">المنطقة الزمنية: القاهرة (UTC+03)</span>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              
+              <div className="grid grid-cols-2 gap-2 text-center mb-4">
+                <div className="bg-emerald-50 border border-emerald-100 p-2 rounded-xl">
+                  <span className="block text-[10px] text-emerald-700 font-bold">التاريخ الفعلي</span>
+                  <span className="text-xs font-black text-emerald-900 font-mono">
+                    {currentTime.toLocaleDateString('ar-EG', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                  </span>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 p-2 rounded-xl">
+                  <span className="block text-[10px] text-blue-700 font-bold">ساعة الخادم</span>
+                  <span className="text-xs font-black text-blue-900 font-mono">
+                    {currentTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              </div>
 
-      {/* Footer info (HIDDEN DURING PRINT) */}
-      <footer className="no-print bg-slate-900 border-t border-slate-800 text-slate-500 text-center py-4 text-xs shrink-0">
-        <p className="max-w-7xl mx-auto px-4">
-          صنع بمثالية لتنسيق ورق الطباعة المعتمد A4. تذكر ضبط إعدادات متصفحك عند طباعة الكشف لإلغاء الرؤوس والتذييلات التلقائية وتفعيل خيار طباعة رسومات الخلفية لطباعة متميزة.
-        </p>
-      </footer>
+              {/* User Identity widget */}
+              <div className="p-3 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Pulsing indicator */}
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  </span>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-bold leading-none">اسم المحاسب النشط:</span>
+                    <span className="block text-xs font-bold text-slate-700 mt-1">أدمن الحسابات - مصر</span>
+                  </div>
+                </div>
+
+                <div className="text-left">
+                  <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">مالية عمومية</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. LIVE TOTALS CARD (Debit, Credit, Balance Difference) */}
+            <div className={`p-5 rounded-2xl border shadow-sm ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5 border-b pb-2">
+                <Database className="w-4.5 h-4.5 text-indigo-500" />
+                <span>ملخص التوازن الفعلي للقيد (Real-time Totals)</span>
+              </h4>
+
+              <div className="space-y-2.5">
+                
+                {/* Total Debit */}
+                <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="block text-[10px] text-blue-600 font-bold">إجمالي المدين (Total Debit)</span>
+                    <span className="block text-sm font-black text-blue-900 font-mono mt-0.5">
+                      {formatCurrency(totalDebit, activeEntry.currency)}
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs font-mono">
+                    DR
+                  </div>
+                </div>
+
+                {/* Total Credit */}
+                <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="block text-[10px] text-rose-600 font-bold">إجمالي الدائن (Total Credit)</span>
+                    <span className="block text-sm font-black text-rose-900 font-mono mt-0.5">
+                      {formatCurrency(totalCredit, activeEntry.currency)}
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 font-bold text-xs font-mono">
+                    CR
+                  </div>
+                </div>
+
+                {/* Difference */}
+                <div className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                  isBalanced 
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
+                    : 'bg-amber-50 border-amber-200 text-amber-800 animate-pulse'
+                }`}>
+                  <div>
+                    <span className="block text-[10px] font-bold">فرق التوازن الحالي</span>
+                    <span className="block text-sm font-black font-mono mt-0.5">
+                      {formatCurrency(difference, activeEntry.currency)}
+                    </span>
+                  </div>
+                  
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                    isBalanced ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'
+                  }`}>
+                    {isBalanced ? 'متوازن' : 'غير متوازن'}
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+            {/* 3. SYSTEM ALERTS PANEL */}
+            <div className={`p-4 rounded-2xl border shadow-sm ${
+              isBalanced 
+                ? 'bg-emerald-50/40 border-emerald-100 text-emerald-900' 
+                : 'bg-rose-50 border-rose-200 text-rose-900 animate-pulse'
+            }`}>
+              <h5 className="font-bold text-xs mb-1.5 flex items-center gap-1.5">
+                <AlertTriangle className={`w-4.5 h-4.5 ${isBalanced ? 'text-emerald-600' : 'text-rose-600'}`} />
+                <span>تنبيهات المدقق الآلي بالنظام (System Alerts)</span>
+              </h5>
+              
+              <p className="text-[11px] leading-relaxed">
+                {isBalanced 
+                  ? 'أمورك طيبة ومستقرة! فرق التوازن مساوٍ للصفر تماماً (0.00 ج.م). يمكنك الآن ترحيل القيد المحاسبي وحفظه للأرشيف بأمان.' 
+                  : 'تنبيه عاجل: إجمالي المبالغ المدينة لا تساوي المبالغ الدائنة. يجب مطابقة وتوازن الطرفين للحفاظ على دقة التسويات ودفاتر الأستاذ.'
+                }
+              </p>
+
+              {/* Tafqeet translation of current entry amount */}
+              {totalDebit > 0 && isBalanced && (
+                <div className="mt-2 pt-2 border-t border-slate-200 text-[10px] leading-relaxed text-slate-500">
+                  <span className="font-bold block text-slate-700">تفقيط المبلغ الإجمالي بالعربية:</span>
+                  <span className="italic">{tafqeet(totalDebit)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 4. FINANCIAL REPORTS AVAILABILITY BLOCK (Progress indicators) */}
+            <div className={`p-5 rounded-2xl border shadow-sm ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5 border-b pb-2">
+                <Layers className="w-4.5 h-4.5 text-indigo-500" />
+                <span>التقارير المحاسبية المحدثة لحظياً</span>
+              </h4>
+
+              <div className="space-y-3">
+                
+                {/* 1. Daily Journal */}
+                <div 
+                  onClick={() => setActiveReport('journal')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير قيود اليومية اليومية</span>
+                    <span className="text-emerald-600 font-mono">جاهز بنسبة 100%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-550" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                {/* 2. General Ledger */}
+                <div 
+                  onClick={() => setActiveReport('ledger')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير دفتر الأستاذ العام</span>
+                    <span className="text-indigo-600 font-mono">جاهز بنسبة 85%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-indigo-550 h-full rounded-full transition-all duration-550" style={{ width: '85%' }} />
+                  </div>
+                </div>
+
+                {/* 3. Trial Balance */}
+                <div 
+                  onClick={() => setActiveReport('trial')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير ميزان المراجعة والأرصدة</span>
+                    <span className="text-emerald-600 font-mono">جاهز بنسبة 100%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-550" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                {/* 4. Income Statement */}
+                <div 
+                  onClick={() => setActiveReport('income')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير قائمة الدخل (الأرباح)</span>
+                    <span className="text-emerald-600 font-mono">جاهز بنسبة 100%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-550" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                {/* 5. Balance Sheet */}
+                <div 
+                  onClick={() => setActiveReport('balance')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير الميزانية العمومية والمركز</span>
+                    <span className="text-emerald-600 font-mono">جاهز بنسبة 100%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-550" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                {/* 6. Cash Flow */}
+                <div 
+                  onClick={() => setActiveReport('cashflow')}
+                  className="group cursor-pointer p-1 rounded-lg hover:bg-slate-50 transition-all"
+                >
+                  <div className="flex justify-between text-[11px] font-bold mb-1">
+                    <span className="text-slate-700 group-hover:text-indigo-600">تقرير قائمة التدفقات النقدية</span>
+                    <span className="text-emerald-600 font-mono">جاهز بنسبة 100%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-550" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* 5. EXPORT AND PRINT TOOLBOX */}
+            <div className={`p-5 rounded-2xl border shadow-sm ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5 border-b pb-2">
+                <Download className="w-4.5 h-4.5 text-indigo-500" />
+                <span>العمليات والترحيل (Import & Export)</span>
+              </h4>
+
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                
+                {/* Excel Import */}
+                <button
+                  onClick={handleExcelImport}
+                  className="flex items-center justify-center gap-1 p-2.5 bg-indigo-550 text-indigo-700 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>استيراد Excel</span>
+                </button>
+
+                {/* Excel Export */}
+                <button
+                  onClick={handleExcelExport}
+                  className="flex items-center justify-center gap-1 p-2.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>تصدير Excel</span>
+                </button>
+
+                {/* A4 Print Voucher Preview */}
+                <button
+                  onClick={() => setShowPrintVoucher(true)}
+                  className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all"
+                >
+                  <Printer className="w-4 h-4 text-emerald-400" />
+                  <span>طباعة احترافية على صفحة A4 واحدة</span>
+                </button>
+
+                {/* SAVE AND POST MAIN BUTTON */}
+                <button
+                  onClick={handleSaveJournal}
+                  className={`col-span-2 mt-2 flex items-center justify-center gap-1.5 p-3 rounded-xl transition-all font-black text-xs ${
+                    isBalanced
+                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-md'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                  disabled={!isBalanced}
+                >
+                  <Save className="w-4.5 h-4.5" />
+                  <span>اعتماد وحفظ وترحيل القيد للدفاتر</span>
+                </button>
+
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* --- BOTTOM GLASS NAVIGATION DOCK --- */}
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 max-w-full px-4 no-print">
+          <div className="bg-slate-900/90 hover:bg-slate-900 backdrop-blur-md rounded-2xl p-2.5 shadow-2xl border border-slate-700 flex items-center gap-2 overflow-x-auto max-w-[95vw] scrollbar-none">
+            
+            <div className="flex items-center gap-1 border-l border-slate-700 pl-2 shrink-0">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] text-slate-400 font-bold">دليل الأقسام</span>
+            </div>
+
+            {[
+              { id: 'accounts', label: 'الحسابات', icon: <Layers className="w-4 h-4" /> },
+              { id: 'banks', label: 'البنوك', icon: <Building className="w-4 h-4" /> },
+              { id: 'suppliers', label: 'الموردين', icon: <User className="w-4 h-4" /> },
+              { id: 'customers', label: 'العملاء', icon: <User className="w-4 h-4" /> },
+              { id: 'assets', label: 'الأصول الثابتة', icon: <Plus className="w-4 h-4" /> },
+              { id: 'taxes', label: 'الضرائب', icon: <Percent className="w-4 h-4" /> },
+              { id: 'lcs', label: 'الاعتمادات المستندية', icon: <ExternalLink className="w-4 h-4" /> },
+              { id: 'warehouses', label: 'المخازن', icon: <Database className="w-4 h-4" /> },
+              { id: 'approvals', label: 'الاعتمادات المحاسبية', icon: <Check className="w-4 h-4" /> },
+            ].map(dept => (
+              <button
+                key={dept.id}
+                onClick={() => {
+                  setActiveDepartment(dept.id as any);
+                  showToast(`تم فتح سجل إدارة ${dept.label}`, 'info');
+                }}
+                className="flex flex-col items-center gap-1 px-3 py-1 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition-all shrink-0"
+              >
+                {dept.icon}
+                <span className="text-[10px] font-bold leading-none">{dept.label}</span>
+              </button>
+            ))}
+
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- ALL MODALS ATTACHMENTS --- */}
+
+      {/* 1. Report Modal */}
+      {activeReport && (
+        <ReportModal
+          isOpen={true}
+          onClose={() => setActiveReport(null)}
+          reportType={activeReport}
+          activeEntry={activeEntry}
+          savedJournals={savedJournals}
+        />
+      )}
+
+      {/* 2. Department Drawer Modal */}
+      {activeDepartment && (
+        <DepartmentModal
+          isOpen={true}
+          onClose={() => setActiveDepartment(null)}
+          department={activeDepartment}
+          activeEntry={activeEntry}
+          savedJournals={savedJournals}
+          setSavedJournals={setSavedJournals}
+        />
+      )}
+
+      {/* 3. A4 Print Voucher Sheet */}
+      {showPrintVoucher && (
+        <PrintVoucher
+          isOpen={true}
+          onClose={() => setShowPrintVoucher(false)}
+          entry={activeEntry}
+        />
+      )}
+
     </div>
   );
 }
