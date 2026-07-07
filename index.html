@@ -465,7 +465,26 @@
       });
       const [config, setConfig] = useState(() => {
         const saved = localStorage.getItem('current_statement_config');
-        return saved ? JSON.parse(saved) : defaultConfig;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            return {
+              ...defaultConfig,
+              ...parsed,
+              visibleColumns: {
+                ...defaultConfig.visibleColumns,
+                ...(parsed.visibleColumns || {}),
+                // Ensure the new columns are enabled by default
+                debit: parsed.visibleColumns && parsed.visibleColumns.debit !== undefined ? parsed.visibleColumns.debit : true,
+                credit: parsed.visibleColumns && parsed.visibleColumns.credit !== undefined ? parsed.visibleColumns.credit : true,
+                runningBalance: parsed.visibleColumns && parsed.visibleColumns.runningBalance !== undefined ? parsed.visibleColumns.runningBalance : true,
+              }
+            };
+          } catch (e) {
+            return defaultConfig;
+          }
+        }
+        return defaultConfig;
       });
       const [activeSavedId, setActiveSavedId] = useState(() => {
         return localStorage.getItem('current_statement_active_id') || null;
@@ -650,7 +669,17 @@
         const t = templates[templateIndex];
         setHeader({ ...t.header });
         setRows(t.rows.map(r => ({ ...r, id: Math.random().toString(36).substr(2, 9) })));
-        setConfig({ ...t.config });
+        setConfig({
+          ...defaultConfig,
+          ...t.config,
+          visibleColumns: {
+            ...defaultConfig.visibleColumns,
+            ...(t.config.visibleColumns || {}),
+            debit: true,
+            credit: true,
+            runningBalance: true
+          }
+        });
         setActiveSavedId(null);
         showToast(`تم تحميل نموذج: ${t.name}`, 'success');
       };
@@ -719,7 +748,17 @@
       const handleLoadSaved = (saved) => {
         setHeader(saved.header);
         setRows(saved.rows);
-        setConfig(saved.config);
+        setConfig({
+          ...defaultConfig,
+          ...(saved.config || {}),
+          visibleColumns: {
+            ...defaultConfig.visibleColumns,
+            ...((saved.config && saved.config.visibleColumns) || {}),
+            debit: true,
+            credit: true,
+            runningBalance: true
+          }
+        });
         setActiveSavedId(saved.id);
         showToast(`تم استرجاع الكشف وتفعيل الحفظ التلقائي: ${saved.name}`, 'success');
       };
@@ -1181,24 +1220,24 @@
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                             <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-1">
                               <label className="text-[9px] font-bold text-slate-400">التاريخ</label>
                               <input 
                                 type="date" 
                                 value={row.date}
                                 onChange={(e) => handleUpdateRow(row.id, 'date', e.target.value)}
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 focus:border-slate-500 outline-none"
                               />
                             </div>
                             <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-1">
-                              <label className="text-[9px] font-bold text-slate-400">مسمى الخام</label>
+                              <label className="text-[9px] font-bold text-slate-400">البيان / الخام</label>
                               <input 
                                 type="text" 
                                 value={row.rawMaterial}
                                 onChange={(e) => handleUpdateRow(row.id, 'rawMaterial', e.target.value)}
-                                placeholder="مثال: رمل سن"
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800"
+                                placeholder="البيان"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 focus:border-slate-500 outline-none"
                               />
                             </div>
                             <div className="flex flex-col gap-0.5">
@@ -1208,7 +1247,7 @@
                                 value={row.quantity === 0 ? '' : row.quantity}
                                 onChange={(e) => handleUpdateRow(row.id, 'quantity', parseFloat(e.target.value) || 0)}
                                 placeholder="0.00"
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono focus:border-slate-500 outline-none"
                               />
                             </div>
                             <div className="flex flex-col gap-0.5">
@@ -1218,14 +1257,11 @@
                                 value={row.price === 0 ? '' : row.price}
                                 onChange={(e) => handleUpdateRow(row.id, 'price', parseFloat(e.target.value) || 0)}
                                 placeholder="0.00"
-                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 text-left font-mono focus:border-slate-500 outline-none"
                               />
                             </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                             <div className="flex flex-col gap-0.5">
-                              <label className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded text-center">مدين (سداد دفعة للمورد)</label>
+                              <label className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded text-center">مدين (له)</label>
                               <input 
                                 type="number" 
                                 value={row.debit === 0 ? '' : row.debit}
@@ -1235,7 +1271,7 @@
                               />
                             </div>
                             <div className="flex flex-col gap-0.5">
-                              <label className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded text-center">دائن (قيمة توريد خام)</label>
+                              <label className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded text-center">دائن (عليه)</label>
                               <input 
                                 type="number" 
                                 value={row.credit === 0 ? '' : row.credit}
@@ -1244,24 +1280,38 @@
                                 className="border border-rose-200 focus:border-rose-500 rounded p-1 text-[11px] font-mono text-left text-rose-900 bg-rose-50/10 outline-none"
                               />
                             </div>
-                            <div className="flex flex-col gap-0.5 col-span-2">
-                              <label className="text-[9px] font-bold text-slate-400">مركز التكلفة / الملاحظات المشتركة</label>
-                              <div className="flex gap-1.5">
-                                <input 
-                                  type="text" 
-                                  value={row.costCenter}
-                                  onChange={(e) => handleUpdateRow(row.id, 'costCenter', e.target.value)}
-                                  placeholder="مركز التكلفة"
-                                  className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 flex-1"
-                                />
-                                <input 
-                                  type="text" 
-                                  value={row.notes}
-                                  onChange={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
-                                  placeholder="ملاحظات البند"
-                                  className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 flex-1"
-                                />
-                              </div>
+                          </div>
+
+                          {row.quantity > 0 && row.price > 0 && (
+                            <div className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/50 font-bold flex items-center justify-between mt-1.5">
+                              <span className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>الضرب التلقائي (دائن / قيمة التوريد):</span>
+                              </span>
+                              <span className="font-mono text-xs">{row.quantity} × {row.price} = {formatCurrency(row.quantity * row.price)} ج.م</span>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">مركز التكلفة / الموقع</label>
+                              <input 
+                                type="text" 
+                                value={row.costCenter}
+                                onChange={(e) => handleUpdateRow(row.id, 'costCenter', e.target.value)}
+                                placeholder="مشروع / موقع"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 focus:border-slate-500 outline-none"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[9px] font-bold text-slate-400">ملاحظات البند</label>
+                              <input 
+                                type="text" 
+                                value={row.notes}
+                                onChange={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                                placeholder="ملاحظات اختيارية"
+                                className="border border-slate-200 rounded p-1 text-[11px] text-slate-800 focus:border-slate-500 outline-none"
+                              />
                             </div>
                           </div>
                         </div>
@@ -1815,7 +1865,16 @@
                               )}
                               {config.visibleColumns.credit && (
                                 <td className={`p-2.5 ${config.tableStyle === 'grid' ? 'border border-slate-200' : ''} text-left font-mono text-rose-900 bg-rose-50/5`}>
-                                  {row.computedCredit > 0 ? formatCurrency(row.computedCredit) : '—'}
+                                  {row.computedCredit > 0 ? (
+                                    <div className="flex flex-col items-end justify-center">
+                                      <span className="font-bold">{formatCurrency(row.computedCredit)}</span>
+                                      {row.quantity > 0 && row.price > 0 && (
+                                        <span className="text-[9px] text-slate-400 font-normal mt-0.5 whitespace-nowrap" dir="ltr">
+                                          ({row.quantity} × {row.price})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : '—'}
                                 </td>
                               )}
                               {config.visibleColumns.runningBalance && (
